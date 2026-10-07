@@ -1,0 +1,68 @@
+// "Claude'a danış": günün özetini, dağılımı ve öneriyi Claude'a yapıştırılacak bir metne çevirir.
+import { CLASS_LABELS } from '../model/params.mjs';
+import { ANCHOR_CLASSES } from './personal.mjs';
+import { num, pct, signed, fundNames } from './format.mjs';
+
+const VIEW = { positive: 'Olumlu', neutral: 'Nötr', negative: 'Olumsuz' };
+
+export function buildPrompt({ latest, state, drift, targets, bands, due, proposal }) {
+  const L = [];
+  const funds = Object.fromEntries(latest.funds.map((f) => [f.code, f]));
+  L.push('maliSK verilerimle helal (katılım) BES dağılımımı birlikte değerlendirmeni istiyorum.');
+  L.push(`Fon verisi tarihi: ${latest.data_date} · model ${latest.model_version} · parametre sürümü ${latest.param_version}.`);
+  L.push('Yatırım tavsiyesi değil karar desteği istiyorum; gerekçeni ve emin olmadığın noktaları açıkça yaz.');
+  L.push('');
+  if (drift) {
+    L.push(`## Dağılımım (giriş ${state.allocation.date}, bugün fiyatla kaymış hâli)`);
+    for (const [code, w] of Object.entries(drift.current).sort((a, b) => b[1] - a[1])) {
+      const f = funds[code];
+      const nm = f ? fundNames(f.name).short : '';
+      L.push(`- ${code} ${nm}: girişte %${num(state.allocation.weights[code], 1)}, bugün %${num(w, 1)}` + (f?.score !== null && f?.score !== undefined ? `, puan ${num(f.score, 0)} (${f.rank}/${f.peers})` : ''));
+    }
+    L.push(`Giriş tarihinden bu yana dağılımın getirisi: ${pct(drift.return_pct, 1)}.`);
+    L.push('');
+  }
+  if (targets) {
+    L.push('## Varlık sınıfları: maruziyet, hedef, bant');
+    for (const c of ANCHOR_CLASSES) {
+      const r = targets.rows[c];
+      const b = bands?.check[c];
+      const view = `görüş ${VIEW[r.label]} (S ${signed(r.S, 2)} = 0,5·T ${signed(r.T, 2)} + 0,25·M ${signed(r.M, 0)} + 0,25·K ${signed(r.K, 0)})`;
+      if (!r.managed) {
+        L.push(`- ${CLASS_LABELS[c]}: maruziyet ${bands ? num(bands.exposure[c], 1) : '—'}, çapada yok (izleniyor); ${view}`);
+        continue;
+      }
+      L.push(`- ${CLASS_LABELS[c]}: maruziyet ${b ? num(b.value, 1) : '—'}, çapa ${num(r.anchor, 1)}, eğim ${signed(r.tilt, 1)}, hedef ${num(r.target, 1)}, bant ${b ? `${num(b.low, 1)}–${num(b.high, 1)}` : '—'}, bant dışı ${bands?.counters[c] ?? 0} iş günü; ${view}`);
+    }
+    if (bands) L.push(`- Belirsiz: ${num(bands.exposure.unclassified, 1)}`);
+    L.push('');
+  }
+  const alerts = Object.entries(latest.classes).filter(([, c]) => c.alert?.triggered);
+  if (alerts.length) {
+    L.push('## Acil uyarılar');
+    for (const [c, v] of alerts) L.push(`- ${CLASS_LABELS[c]}: 20 iş gününde ${pct(v.alert.change_pct, 1)}, eşik −%${num(v.alert.threshold_pct, 1)} (normal oynaklığın ${num(v.alert.sigma_multiple, 1)} katı)`);
+    L.push('');
+  }
+  if (proposal) {
+    L.push(`## Modelin eylem önerisi${due?.active ? '' : ' (henüz teyit edilmedi)'}`);
+    for (const ch of proposal.changes) L.push(`- ${ch.code}: %${ch.from.toFixed(0)} → %${ch.to}`);
+    if (proposal.gaps.length) L.push(`Uygun araç bulunamayan sınıflar: ${proposal.gaps.map((g) => CLASS_LABELS[g.cls]).join(', ')}.`);
+    L.push('');
+  }
+  if (latest.anchor?.ok) {
+    const a = latest.anchor;
+    L.push(`## Uygulamanın çapa önerisi (${a.weeks} haftalık veri, risk eşitliği)`);
+    L.push('- Gruplu: ' + Object.entries(a.user_groups.weights).map(([c, w]) => `${CLASS_LABELS[c]} ${num(w, 0)}`).join(', '));
+    L.push('- Veriden gruplama: ' + a.suggested.groups.map((g) => g.map((c) => CLASS_LABELS[c]).join('+')).join(' / '));
+    L.push('');
+  }
+  L.push('## Kategorilerin ilk sıradaki fonları');
+  const best = {};
+  for (const f of latest.funds) if (f.halal && f.score !== null && (!best[f.category] || f.score > best[f.category].score)) best[f.category] = f;
+  for (const [cat, f] of Object.entries(best)) {
+    L.push(`- ${latest.category_labels[cat] || cat}: ${f.code} ${fundNames(f.name).short}, puan ${num(f.score, 0)}, 1 yıl ${pct(f.returns?.['1y'], 1)}, fazla getiri indisi ${signed(f.indices?.excess, 2)}`);
+  }
+  L.push('');
+  L.push('Sorularım: Dağılımım hedeften neden ve ne kadar sapıyor? Modelin önerisi mantıklı mı, gözden kaçan bir risk var mı? Çapamı değiştirmem gerekir mi?');
+  return L.join('\n');
+}

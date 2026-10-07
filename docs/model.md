@@ -72,6 +72,9 @@ Uygulama çapayı önerir; kullanıcı kendi çapasını Ayarlar'da girer. Bantl
 - **Eğim (sürekli):** `eğim = 5 · max(−1, min(1, S / 0,5))` puan. Görüş etiketi: S ≥ 0,40 Olumlu,
   S ≤ −0,25 Olumsuz, arası Nötr.
 - **Hedef:** `çapa + eğim`; negatif hedef 0'a çekilir, toplam 100'e ölçeklenir.
+- **İzlenen sınıf (kullanıcı onayı bekliyor):** çapada değeri olmayan sınıfın hedefi ve bandı yoktur; öneri mevcut
+  payını korur. Yönetilen sınıfların hedefleri `100 − izlenen sınıfların mevcut payı`na ölçeklenir. Uygulamanın çapa
+  önerisi yalnız yeterli verisi olan sınıfları içerdiği için gerekli; aksi hâlde verisi olmayan sınıfın hedefi 0 olurdu.
 - **Görüş öneri üretmez (karar: A).** Görüş yalnız hedefi kaydırır; öneriyi bant aşımı tetikler.
 
 ## 6. Katman 2 — fon puanı
@@ -161,3 +164,4 @@ Ek A'daki 8 fonla, yılbaşı = 9 ay:
 - Negatif reel faizde TL sabit uyarısı; döviz sabite aynalı reel faiz kuralı; içerik geçmişiyle
   fazla getiri.
 - Hak sayacı, Google Sheet, TL tutar ve XIRR ilk sürümden çıkarıldı. Ledoit-Wolf kapalı (Ö2).
+- Çapada olmayan sınıf izlenir (onay bekliyor).

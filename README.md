@@ -4,7 +4,7 @@ Helal (katılım) bireysel emeklilik fonları için kişisel karar destek uygula
 Her iş günü üç soruya cevap verir: dağılımım ne durumda, piyasa ve fonlar ne söylüyor,
 dağılımımı değiştirmeli miyim. Son karar kullanıcınındır.
 
-**Durum:** model çekirdeği ve kabul testleri hazır; veri alımı ve telefon arayüzü yapılıyor.
+**Durum:** ilk sürüm. Telefonda: https://seyfettinkarakaya.github.io/maliSK/ (Safari → Paylaş → Ana Ekrana Ekle).
 
 ## Nasıl çalışır
 
@@ -19,7 +19,10 @@ dağılımımı değiştirmeli miyim. Son karar kullanıcınındır.
 
 | Yol | Görev |
 |---|---|
+| `index.html`, `app.css`, `src/app/` | Telefon uygulaması (PWA): ekranlar, kişisel hesaplar, Claude metni |
 | `src/model/` | Model çekirdeği: indisler, maruziyet, puan, taktik, bant, risk eşitliği, optimizasyon |
+| `src/data/`, `src/pipeline/` | TEFAS istemcisi, veri deposu, günlük hesap |
+| `data/` | Günlük işin yazdığı veri (`latest.json` telefonun okuduğu özet) |
 | `tests/` | Kabul ve birim testleri (`npm test`) |
 | `tools/probe.py` | Canlı veri denemesi: TEFAS, EVDS, FRED alan adları |
 | `docs/model.md` | Model, sürüm 2.1 |
