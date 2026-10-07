@@ -1,0 +1,12 @@
+{
+  "name": "malisk",
+  "private": true,
+  "type": "module",
+  "description": "maliSK: helal BES fonları için kişisel karar destek uygulaması",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
