@@ -40,7 +40,8 @@ function request(url, { method = 'GET', body = null } = {}, redirects = 3) {
 
 const PAGES = ['/tr/fon-verileri', '/tr', '/tr/fon-karsilastirma', '/tr/fon-analiz', '/tr/fon-detayli-analiz'];
 const KEY_RE = /(s?fonTur\w*|fonGrub\w*|fonUnvanTip\w*|semsiye\w*|şemsiye\w*|katil[iı]m\w*|katılım\w*|faizsiz\w*|islami\w*|icazet\w*|danışma kurulu\w*)/gi;
-const API_RE = /["'`](\/api\/[A-Za-z0-9_\-\/]+)["'`]/g;
+const API_RE = /["'`]([^"'`\s]{0,40}api\/[A-Za-z0-9_\-\/]+)["'`]/g;
+const JS_RE = /["'`]((?:\.{0,2}\/)?[A-Za-z0-9_\-\/\.]+\.js)["'`]/g;
 const ENDPOINT_RE = /["'`]([A-Za-z]{4,}(?:Getir|Liste|Listesi|Getirir|Sirali\w*))["'`]/g;
 
 async function main() {
@@ -61,13 +62,24 @@ async function main() {
   const names = new Map();
   const keys = new Map();
   const sources = [...Object.entries(pages).map(([p, r]) => [p, r.text])];
-  let n = 0;
-  for (const url of scripts) {
-    if (n++ >= 80) break;
+  // Betiklerin içinden çağrılan diğer JavaScript parçalarını da izle (en çok 150 dosya).
+  const queue = [...scripts];
+  const seen = new Set();
+  while (queue.length && seen.size < 150) {
+    const url = queue.shift();
+    if (seen.has(url)) continue;
+    seen.add(url);
     const r = await request(url);
     sources.push([url.replace(ORIGIN, ''), r.text]);
-    await sleep(500);
+    for (const m of r.text.matchAll(JS_RE)) {
+      try {
+        const next = new URL(m[1], url).href;
+        if (next.startsWith(ORIGIN) && !seen.has(next)) queue.push(next);
+      } catch { /* geçersiz yol */ }
+    }
+    await sleep(300);
   }
+  L.push(`İncelenen JavaScript dosyası: ${seen.size}`, '', '<details><summary>fon-verileri HTML</summary>', '', '```html', (pages['/tr/fon-verileri']?.text || '').slice(0, 4000), '```', '</details>', '');
   for (const [src, text] of sources) {
     for (const m of text.matchAll(API_RE)) apis.set(m[1], src);
     for (const m of text.matchAll(ENDPOINT_RE)) names.set(m[1], src);
