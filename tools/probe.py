@@ -335,45 +335,60 @@ def analyze_dist(rows: list[dict]) -> dict:
     }
 
 
+def tefas_call(name: str, url: str, body: dict, attempts: int = 3) -> Call:
+    """Bağlantı hatasında 20 sn arayla yeniden dener; TEFAS hata mesajını hataya çevirir."""
+    for i in range(attempts):
+        c = call(name if i == 0 else f"{name} (deneme {i + 1})", "POST", url,
+                 headers=TEFAS_HEADERS, json_body=body)
+        if c.status is not None:
+            break
+        time.sleep(20)
+    if isinstance(c.data, dict):
+        msg = c.data.get("errorMessage")
+        empty = msg and any(m in msg.lower() for m in ("out of bounds", "veri bulunamadı"))
+        if msg and not empty:
+            c.ok = False
+            c.error = msg
+    return c
+
+
 def probe_tefas() -> dict:
     end = today_istanbul()
     start = end - timedelta(days=9)
     out: dict = {"calls": []}
+    plan = [
+        ("info", "info EMK son 10 gün", TEFAS_INFO_URL, tefas_body("EMK", start, end)),
+        ("dist", "dağılım EMK son 10 gün", TEFAS_DIST_URL, tefas_body("EMK", start, end)),
+        ("dist_3y", "dağılım EMK, 3 yıl önce (5 gün)", TEFAS_DIST_URL,
+         tefas_body("EMK", end - timedelta(days=3 * 365 + 4), end - timedelta(days=3 * 365))),
+        ("info_5y", "info EMK, 5 yıl önce (5 gün)", TEFAS_INFO_URL,
+         tefas_body("EMK", end - timedelta(days=5 * 365 + 4), end - timedelta(days=5 * 365))),
+        ("info_31", "info EMK 31 gün (sınır)", TEFAS_INFO_URL,
+         tefas_body("EMK", end - timedelta(days=30), end)),
+    ]
+    calls = {}
+    for i, (key, name, url, body) in enumerate(plan):
+        if i:
+            time.sleep(TEFAS_PAUSE_S)
+        calls[key] = tefas_call(name, url, body)
+        out["calls"].append(calls[key].summary())
 
-    info = call("info EMK son 10 gün", "POST", TEFAS_INFO_URL,
-                headers=TEFAS_HEADERS, json_body=tefas_body("EMK", start, end))
-    out["calls"].append(info.summary())
-    time.sleep(TEFAS_PAUSE_S)
-    dist = call("dağılım EMK son 10 gün", "POST", TEFAS_DIST_URL,
-                headers=TEFAS_HEADERS, json_body=tefas_body("EMK", start, end))
-    out["calls"].append(dist.summary())
-    time.sleep(TEFAS_PAUSE_S)
-    one_fund = call("info VGA 365 gün (tek fon, uzun aralık)", "POST", TEFAS_INFO_URL,
-                    headers=TEFAS_HEADERS,
-                    json_body=tefas_body("EMK", end - timedelta(days=364), end, "VGA"))
-    out["calls"].append(one_fund.summary())
-    time.sleep(TEFAS_PAUSE_S)
-    wide = call("info EMK 45 gün (30 gün sınırı)", "POST", TEFAS_INFO_URL,
-                headers=TEFAS_HEADERS,
-                json_body=tefas_body("EMK", end - timedelta(days=44), end))
-    out["calls"].append(wide.summary())
-
-    for c in (info, dist, one_fund, wide):
+    for c in calls.values():
         if isinstance(c.data, dict):
-            c_extra = {k: v for k, v in c.data.items() if k != "resultList"}
-            out.setdefault("top_level", {})[c.name] = c_extra
+            out.setdefault("top_level", {})[c.name] = {k: v for k, v in c.data.items() if k != "resultList"}
 
-    info_rows, dist_rows = tefas_rows(info), tefas_rows(dist)
+    info_rows, dist_rows = tefas_rows(calls["info"]), tefas_rows(calls["dist"])
     out["info"] = analyze_info(info_rows)
     out["dist"] = analyze_dist(dist_rows)
-    for label, c in (("one_fund", one_fund), ("wide", wide)):
-        rows = tefas_rows(c)
-        out[label] = {
+    for key, title in (("dist_3y", "Dağılım, 3 yıl önce"), ("info_5y", "Fiyat, 5 yıl önce"), ("info_31", "Fiyat, 31 gün")):
+        rows = tefas_rows(calls[key])
+        out.setdefault("ranges", []).append({
+            "title": title,
             "rows": len(rows),
-            "dates": len({str(r.get("tarih")) for r in rows}),
-            "first": str(min((r.get("tarih") for r in rows), key=str, default="")),
-            "last": str(max((r.get("tarih") for r in rows), key=str, default="")),
-        }
+            "funds": len({r.get("fonKodu") for r in rows}),
+            "dates": sorted({str(r.get("tarih")) for r in rows}),
+            "error": calls[key].error,
+        })
 
     kat_info = [r for r in latest_rows(info_rows) if is_katilim(r)][:3]
     kat_codes = {r.get("fonKodu") for r in kat_info}
@@ -594,10 +609,13 @@ def render(res: dict) -> str:
                            for h in dist["helal_flags"][:40]]) + [""]
         else:
             L += ["Yok.", ""]
-    for label, title in (("one_fund", "Tek fon, 365 gün"), ("wide", "Tüm EMK, 45 gün")):
-        if t.get(label):
-            x = t[label]
-            L += [f"- **{title}:** {x['rows']} satır, {x['dates']} farklı tarih, {x['first']} → {x['last']}"]
+    if t.get("ranges"):
+        L += ["### 1.3 Tarih aralığı ve geçmiş derinliği", "",
+              '- Tek istekte en çok 1 ay (TEFAS: "Tarih aralığı 1 ayı aşamaz"); tek fon için de aynı.', ""]
+        for x in t["ranges"]:
+            span = f"{x['dates'][0]} → {x['dates'][-1]}" if x["dates"] else "—"
+            L += [f"- **{x['title']}:** {x['rows']} satır, {x['funds']} fon, {len(x['dates'])} tarih ({span})"
+                  + (f" · hata: {x['error']}" if x["error"] else "")]
     L += [""]
 
     # EVDS
