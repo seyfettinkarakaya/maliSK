@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-10-07 22:22",
+  "generated_at": "2026-10-07 22:26",
   "runner": {
     "country": "US",
-    "region": "California",
+    "region": "Virginia",
     "org": "AS8075 Microsoft Corporation",
     "error": null
   },
@@ -14,38 +14,51 @@
         "status": 200,
         "ok": true,
         "error": null,
-        "elapsed_s": 2.92,
+        "elapsed_s": 2.26,
         "headers": {
           "content-type": "application/json;charset=UTF-8"
         }
       },
       {
-        "name": "dağılım EMK son 10 gün",
+        "name": "dağılım EMK son 10 gün (deneme 2)",
         "url": "https://www.tefas.gov.tr/api/funds/dagilimSiraliGetirT",
-        "status": null,
-        "ok": false,
-        "error": "ConnectTimeout: HTTPSConnectionPool(host='www.tefas.gov.tr', port=443): Max retries exceeded with url: /api/funds/dagilimSiraliGetirT (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.tefas.gov.tr', port=443) at 0x7f7a76bcff50>, 'Connection to www.tefas.gov.tr timed out. (connect timeout=60)'))",
-        "elapsed_s": 60.45,
-        "headers": {}
-      },
-      {
-        "name": "info VGA 365 gün (tek fon, uzun aralık)",
-        "url": "https://www.tefas.gov.tr/api/funds/fonGnlBlgSiraliGetir",
         "status": 200,
         "ok": true,
         "error": null,
-        "elapsed_s": 1.24,
+        "elapsed_s": 2.96,
         "headers": {
           "content-type": "application/json;charset=UTF-8"
         }
       },
       {
-        "name": "info EMK 45 gün (30 gün sınırı)",
+        "name": "dağılım EMK, 3 yıl önce (5 gün) (deneme 2)",
+        "url": "https://www.tefas.gov.tr/api/funds/dagilimSiraliGetirT",
+        "status": 200,
+        "ok": true,
+        "error": null,
+        "elapsed_s": 2.51,
+        "headers": {
+          "content-type": "application/json;charset=UTF-8"
+        }
+      },
+      {
+        "name": "info EMK, 5 yıl önce (5 gün) (deneme 2)",
+        "url": "https://www.tefas.gov.tr/api/funds/fonGnlBlgSiraliGetir",
+        "status": 200,
+        "ok": false,
+        "error": "Geçersiz veri: Baslangıc Tarihi 5 yıldan eski olamaz",
+        "elapsed_s": 0.56,
+        "headers": {
+          "content-type": "application/json;charset=UTF-8"
+        }
+      },
+      {
+        "name": "info EMK 31 gün (sınır) (deneme 2)",
         "url": "https://www.tefas.gov.tr/api/funds/fonGnlBlgSiraliGetir",
         "status": 200,
         "ok": true,
         "error": null,
-        "elapsed_s": 0.86,
+        "elapsed_s": 31.99,
         "headers": {
           "content-type": "application/json;charset=UTF-8"
         }
@@ -58,17 +71,29 @@
         "toplamSayi": 3200,
         "toplamSayfa": 1
       },
-      "info VGA 365 gün (tek fon, uzun aralık)": {
+      "dağılım EMK son 10 gün (deneme 2)": {
         "errorCode": null,
-        "errorMessage": "Geçersiz veri: Tarih aralığı 1 ayı aşamaz",
+        "errorMessage": null,
+        "toplamSayi": 3200,
+        "toplamSayfa": 1
+      },
+      "dağılım EMK, 3 yıl önce (5 gün) (deneme 2)": {
+        "errorCode": null,
+        "errorMessage": null,
+        "toplamSayi": 1080,
+        "toplamSayfa": 1
+      },
+      "info EMK, 5 yıl önce (5 gün) (deneme 2)": {
+        "errorCode": null,
+        "errorMessage": "Geçersiz veri: Baslangıc Tarihi 5 yıldan eski olamaz",
         "toplamSayi": null,
         "toplamSayfa": null
       },
-      "info EMK 45 gün (30 gün sınırı)": {
+      "info EMK 31 gün (sınır) (deneme 2)": {
         "errorCode": null,
-        "errorMessage": "Geçersiz veri: Tarih aralığı 1 ayı aşamaz",
-        "toplamSayi": null,
-        "toplamSayfa": null
+        "errorMessage": null,
+        "toplamSayi": 9200,
+        "toplamSayfa": 1
       }
     },
     "info": {
@@ -146,28 +171,463 @@
       "sample_code": "VGA"
     },
     "dist": {
-      "row_count": 0,
-      "latest_fund_count": 0,
-      "latest_katilim_count": 0,
-      "unknown_keys": [],
+      "row_count": 3200,
+      "latest_fund_count": 400,
+      "latest_katilim_count": 123,
+      "unknown_keys": [
+        "bilFiyat"
+      ],
       "missing_keys": [],
-      "katilim_row_sum_min": null,
-      "katilim_row_sum_max": null,
-      "fields": [],
-      "helal_flags": []
+      "katilim_row_sum_min": 1791401303576.0,
+      "katilim_row_sum_max": 1791401303584.0,
+      "fields": [
+        {
+          "raw": "bb",
+          "pytefas": "bank_bill_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "byf",
+          "pytefas": "etf_pct",
+          "katilim_nonzero": 54,
+          "katilim_max": 24.41,
+          "all_nonzero": 134
+        },
+        {
+          "raw": "d",
+          "pytefas": "other_pct",
+          "katilim_nonzero": 15,
+          "katilim_max": 24.99,
+          "all_nonzero": 32
+        },
+        {
+          "raw": "db",
+          "pytefas": "fx_payable_bond_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "bpp",
+          "pytefas": "bist_money_market_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "btaa",
+          "pytefas": "bist_committed_buy_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "btas",
+          "pytefas": "bist_committed_sell_pct",
+          "katilim_nonzero": 70,
+          "katilim_max": 61.41,
+          "all_nonzero": 74
+        },
+        {
+          "raw": "dt",
+          "pytefas": "government_bond_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 165
+        },
+        {
+          "raw": "dot",
+          "pytefas": "fx_payable_bill_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "eut",
+          "pytefas": "eurobond_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "fb",
+          "pytefas": "financing_bill_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 63
+        },
+        {
+          "raw": "fkb",
+          "pytefas": "fund_participation_certificate_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "gas",
+          "pytefas": "real_estate_certificate_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "gsykb",
+          "pytefas": "venture_capital_fund_pct",
+          "katilim_nonzero": 58,
+          "katilim_max": 15.26,
+          "all_nonzero": 187
+        },
+        {
+          "raw": "gsyy",
+          "pytefas": "venture_capital_investment_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "gykb",
+          "pytefas": "real_estate_fund_pct",
+          "katilim_nonzero": 23,
+          "katilim_max": 6.94,
+          "all_nonzero": 93
+        },
+        {
+          "raw": "gyy",
+          "pytefas": "real_estate_investment_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "hb",
+          "pytefas": "treasury_bill_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 21
+        },
+        {
+          "raw": "hs",
+          "pytefas": "stock_pct",
+          "katilim_nonzero": 85,
+          "katilim_max": 90.99,
+          "all_nonzero": 286
+        },
+        {
+          "raw": "kba",
+          "pytefas": "fx_government_internal_debt_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 27
+        },
+        {
+          "raw": "kh",
+          "pytefas": "participation_account_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "khau",
+          "pytefas": "participation_account_gold_pct",
+          "katilim_nonzero": 2,
+          "katilim_max": 0.64,
+          "all_nonzero": 2
+        },
+        {
+          "raw": "khd",
+          "pytefas": "participation_account_fx_pct",
+          "katilim_nonzero": 7,
+          "katilim_max": 7.95,
+          "all_nonzero": 9
+        },
+        {
+          "raw": "khtl",
+          "pytefas": "participation_account_tl_pct",
+          "katilim_nonzero": 65,
+          "katilim_max": 100.0,
+          "all_nonzero": 83
+        },
+        {
+          "raw": "kks",
+          "pytefas": "government_lease_certificate_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "kksd",
+          "pytefas": "government_lease_certificate_fx_pct",
+          "katilim_nonzero": 5,
+          "katilim_max": 90.18,
+          "all_nonzero": 8
+        },
+        {
+          "raw": "kkstl",
+          "pytefas": "government_lease_certificate_tl_pct",
+          "katilim_nonzero": 84,
+          "katilim_max": 93.74,
+          "all_nonzero": 122
+        },
+        {
+          "raw": "kksyd",
+          "pytefas": "government_foreign_lease_certificate_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 1
+        },
+        {
+          "raw": "km",
+          "pytefas": "precious_metals_pct",
+          "katilim_nonzero": 20,
+          "katilim_max": 89.05,
+          "all_nonzero": 41
+        },
+        {
+          "raw": "kmbyf",
+          "pytefas": "precious_metals_etf_pct",
+          "katilim_nonzero": 17,
+          "katilim_max": 27.48,
+          "all_nonzero": 27
+        },
+        {
+          "raw": "kmkba",
+          "pytefas": "precious_metals_government_debt_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 6
+        },
+        {
+          "raw": "kmkks",
+          "pytefas": "precious_metals_lease_certificate_pct",
+          "katilim_nonzero": 10,
+          "katilim_max": 75.23,
+          "all_nonzero": 22
+        },
+        {
+          "raw": "kibd",
+          "pytefas": "government_external_debt_pct",
+          "katilim_nonzero": 1,
+          "katilim_max": 4.18,
+          "all_nonzero": 8
+        },
+        {
+          "raw": "osks",
+          "pytefas": "private_sector_lease_certificate_pct",
+          "katilim_nonzero": 63,
+          "katilim_max": 93.42,
+          "all_nonzero": 81
+        },
+        {
+          "raw": "ost",
+          "pytefas": "private_sector_bond_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 111
+        },
+        {
+          "raw": "r",
+          "pytefas": "repo_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "t",
+          "pytefas": "derivative_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "tpp",
+          "pytefas": "takasbank_money_market_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 100
+        },
+        {
+          "raw": "tr",
+          "pytefas": "reverse_repo_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 188
+        },
+        {
+          "raw": "vdm",
+          "pytefas": "asset_backed_securities_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 30
+        },
+        {
+          "raw": "vm",
+          "pytefas": "term_deposit_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "vmau",
+          "pytefas": "deposit_gold_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "vmd",
+          "pytefas": "deposit_fx_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 17
+        },
+        {
+          "raw": "vmtl",
+          "pytefas": "deposit_tl_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 133
+        },
+        {
+          "raw": "vint",
+          "pytefas": "futures_cash_collateral_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 187
+        },
+        {
+          "raw": "yba",
+          "pytefas": "foreign_debt_security_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "ybkb",
+          "pytefas": "foreign_government_debt_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 5
+        },
+        {
+          "raw": "ybosb",
+          "pytefas": "foreign_private_sector_debt_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 3
+        },
+        {
+          "raw": "ybyf",
+          "pytefas": "foreign_etf_pct",
+          "katilim_nonzero": 3,
+          "katilim_max": 3.48,
+          "all_nonzero": 38
+        },
+        {
+          "raw": "yhs",
+          "pytefas": "foreign_stock_pct",
+          "katilim_nonzero": 5,
+          "katilim_max": 51.89,
+          "all_nonzero": 45
+        },
+        {
+          "raw": "ymk",
+          "pytefas": "foreign_security_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 0
+        },
+        {
+          "raw": "yyf",
+          "pytefas": "investment_fund_pct",
+          "katilim_nonzero": 65,
+          "katilim_max": 83.43,
+          "all_nonzero": 235
+        },
+        {
+          "raw": "oksyd",
+          "pytefas": "private_sector_foreign_lease_certificate_pct",
+          "katilim_nonzero": 3,
+          "katilim_max": 4.2,
+          "all_nonzero": 3
+        },
+        {
+          "raw": "osdb",
+          "pytefas": "private_sector_external_debt_pct",
+          "katilim_nonzero": 0,
+          "katilim_max": 0.0,
+          "all_nonzero": 20
+        },
+        {
+          "raw": "bilFiyat",
+          "pytefas": "—(pytefas'ta yok)",
+          "katilim_nonzero": 123,
+          "katilim_max": 1791401303484.0,
+          "all_nonzero": 400
+        }
+      ],
+      "helal_flags": [
+        {
+          "code": "HEA",
+          "name": "AXA HAYAT VE EMEKLİLİK A.Ş. ALTIN KATILIM EMEKLİLİK YATIRIM FONU",
+          "hits": {
+            "kibd": 4.18
+          }
+        }
+      ]
     },
-    "one_fund": {
-      "rows": 0,
-      "dates": 0,
-      "first": "",
-      "last": ""
-    },
-    "wide": {
-      "rows": 0,
-      "dates": 0,
-      "first": "",
-      "last": ""
-    }
+    "ranges": [
+      {
+        "title": "Dağılım, 3 yıl önce",
+        "rows": 1080,
+        "funds": 360,
+        "dates": [
+          "2023-10-04",
+          "2023-10-05",
+          "2023-10-06"
+        ],
+        "error": null
+      },
+      {
+        "title": "Fiyat, 5 yıl önce",
+        "rows": 0,
+        "funds": 0,
+        "dates": [],
+        "error": "Geçersiz veri: Baslangıc Tarihi 5 yıldan eski olamaz"
+      },
+      {
+        "title": "Fiyat, 31 gün",
+        "rows": 9200,
+        "funds": 400,
+        "dates": [
+          "2026-09-07",
+          "2026-09-08",
+          "2026-09-09",
+          "2026-09-10",
+          "2026-09-11",
+          "2026-09-14",
+          "2026-09-15",
+          "2026-09-16",
+          "2026-09-17",
+          "2026-09-18",
+          "2026-09-21",
+          "2026-09-22",
+          "2026-09-23",
+          "2026-09-24",
+          "2026-09-25",
+          "2026-09-28",
+          "2026-09-29",
+          "2026-09-30",
+          "2026-10-01",
+          "2026-10-02",
+          "2026-10-05",
+          "2026-10-06",
+          "2026-10-07"
+        ],
+        "error": null
+      }
+    ]
   },
   "evds": {
     "skipped": "EVDS_API_KEY tanımlı değil"
