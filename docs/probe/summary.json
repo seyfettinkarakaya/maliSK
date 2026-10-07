@@ -1,0 +1,178 @@
+{
+  "generated_at": "2026-10-07 22:22",
+  "runner": {
+    "country": "US",
+    "region": "California",
+    "org": "AS8075 Microsoft Corporation",
+    "error": null
+  },
+  "tefas": {
+    "calls": [
+      {
+        "name": "info EMK son 10 gün",
+        "url": "https://www.tefas.gov.tr/api/funds/fonGnlBlgSiraliGetir",
+        "status": 200,
+        "ok": true,
+        "error": null,
+        "elapsed_s": 2.92,
+        "headers": {
+          "content-type": "application/json;charset=UTF-8"
+        }
+      },
+      {
+        "name": "dağılım EMK son 10 gün",
+        "url": "https://www.tefas.gov.tr/api/funds/dagilimSiraliGetirT",
+        "status": null,
+        "ok": false,
+        "error": "ConnectTimeout: HTTPSConnectionPool(host='www.tefas.gov.tr', port=443): Max retries exceeded with url: /api/funds/dagilimSiraliGetirT (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.tefas.gov.tr', port=443) at 0x7f7a76bcff50>, 'Connection to www.tefas.gov.tr timed out. (connect timeout=60)'))",
+        "elapsed_s": 60.45,
+        "headers": {}
+      },
+      {
+        "name": "info VGA 365 gün (tek fon, uzun aralık)",
+        "url": "https://www.tefas.gov.tr/api/funds/fonGnlBlgSiraliGetir",
+        "status": 200,
+        "ok": true,
+        "error": null,
+        "elapsed_s": 1.24,
+        "headers": {
+          "content-type": "application/json;charset=UTF-8"
+        }
+      },
+      {
+        "name": "info EMK 45 gün (30 gün sınırı)",
+        "url": "https://www.tefas.gov.tr/api/funds/fonGnlBlgSiraliGetir",
+        "status": 200,
+        "ok": true,
+        "error": null,
+        "elapsed_s": 0.86,
+        "headers": {
+          "content-type": "application/json;charset=UTF-8"
+        }
+      }
+    ],
+    "top_level": {
+      "info EMK son 10 gün": {
+        "errorCode": null,
+        "errorMessage": null,
+        "toplamSayi": 3200,
+        "toplamSayfa": 1
+      },
+      "info VGA 365 gün (tek fon, uzun aralık)": {
+        "errorCode": null,
+        "errorMessage": "Geçersiz veri: Tarih aralığı 1 ayı aşamaz",
+        "toplamSayi": null,
+        "toplamSayfa": null
+      },
+      "info EMK 45 gün (30 gün sınırı)": {
+        "errorCode": null,
+        "errorMessage": "Geçersiz veri: Tarih aralığı 1 ayı aşamaz",
+        "toplamSayi": null,
+        "toplamSayfa": null
+      }
+    },
+    "info": {
+      "row_count": 3200,
+      "fund_count": 400,
+      "dates": [
+        "2026-09-28",
+        "2026-09-29",
+        "2026-09-30",
+        "2026-10-01",
+        "2026-10-02",
+        "2026-10-05",
+        "2026-10-06",
+        "2026-10-07"
+      ],
+      "latest_fund_count": 400,
+      "latest_katilim_count": 123,
+      "katilim_names_sample": [
+        "AGESA EMEKLİLİK VE HAYAT A.Ş. BAŞLANGIÇ KATILIM EMEKLİLİK YATIRIM FONU",
+        "AGESA HAYAT VE EMEKLİLİK A.Ş. ALTIN KATILIM EMEKLİLİK YATIRIM FONU",
+        "AGESA HAYAT VE EMEKLİLİK A.Ş. KATILIM HİSSE SENEDİ EMEKLİLİK YATIRIM FONU",
+        "AGESA HAYAT VE EMEKLİLİK A.Ş. KATILIM KATKI EMEKLİLİK YATIRIM FONU",
+        "AGESA HAYAT VE EMEKLİLİK A.Ş. KATILIM STANDART EMEKLİLİK YATIRIM FONU",
+        "AGESA HAYAT VE EMEKLİLİK A.Ş. OKS AGRESİF KATILIM DEĞİŞKEN EMEKLİLİK YATIRIM FONU",
+        "AGESA HAYAT VE EMEKLİLİK A.Ş. OKS DİNAMİK KATILIM DEĞİŞKEN EMEKLİLİK YATIRIM FONU",
+        "AGESA HAYAT VE EMEKLİLİK A.Ş. OKS KATILIM STANDART EMEKLİLİK YATIRIM FONU"
+      ],
+      "fields": [
+        {
+          "raw": "fonKodu",
+          "pytefas": "fund_code",
+          "example": "VGA"
+        },
+        {
+          "raw": "fonUnvan",
+          "pytefas": "fund_name",
+          "example": "TÜRKİYE HAYAT VE EMEKLİLİK A.Ş. ALTIN KATILIM EMEKLİLİK YATIRIM FONU"
+        },
+        {
+          "raw": "tarih",
+          "pytefas": "date",
+          "example": "2026-10-07"
+        },
+        {
+          "raw": "fiyat",
+          "pytefas": "price",
+          "example": 0.74301
+        },
+        {
+          "raw": "tedPaySayisi",
+          "pytefas": "shares_outstanding",
+          "example": 325841199189.944
+        },
+        {
+          "raw": "kisiSayisi",
+          "pytefas": "investor_count",
+          "example": 2004428
+        },
+        {
+          "raw": "portfoyBuyukluk",
+          "pytefas": "portfolio_size",
+          "example": 242103427180.25
+        },
+        {
+          "raw": "borsaBultenFiyat",
+          "pytefas": "exchange_bulletin_price",
+          "example": null
+        },
+        {
+          "raw": "rn",
+          "pytefas": "—(pytefas'ta yok)",
+          "example": 373
+        }
+      ],
+      "sample_code": "VGA"
+    },
+    "dist": {
+      "row_count": 0,
+      "latest_fund_count": 0,
+      "latest_katilim_count": 0,
+      "unknown_keys": [],
+      "missing_keys": [],
+      "katilim_row_sum_min": null,
+      "katilim_row_sum_max": null,
+      "fields": [],
+      "helal_flags": []
+    },
+    "one_fund": {
+      "rows": 0,
+      "dates": 0,
+      "first": "",
+      "last": ""
+    },
+    "wide": {
+      "rows": 0,
+      "dates": 0,
+      "first": "",
+      "last": ""
+    }
+  },
+  "evds": {
+    "skipped": "EVDS_API_KEY tanımlı değil"
+  },
+  "fred": {
+    "skipped": "FRED_API_KEY tanımlı değil"
+  }
+}

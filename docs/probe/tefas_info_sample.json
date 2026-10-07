@@ -1,0 +1,35 @@
+[
+  {
+    "fonKodu": "ACV",
+    "fonUnvan": "ALLIANZ YAŞAM VE EMEKLİLİK A.Ş. BAŞLANGIÇ KATILIM EMEKLİLİK YATIRIM FONU",
+    "tarih": "2026-10-07",
+    "fiyat": 0.101815,
+    "tedPaySayisi": 7687623228.844,
+    "kisiSayisi": 140359,
+    "portfoyBuyukluk": 782713003.06,
+    "borsaBultenFiyat": null,
+    "rn": 3
+  },
+  {
+    "fonKodu": "AEA",
+    "fonUnvan": "ANADOLU HAYAT EMEKLİLİK A.Ş. ALTIN KATILIM EMEKLİLİK YATIRIM FONU",
+    "tarih": "2026-10-07",
+    "fiyat": 0.677368,
+    "tedPaySayisi": 132366153752.851,
+    "kisiSayisi": 722493,
+    "portfoyBuyukluk": 89660541859.47,
+    "borsaBultenFiyat": null,
+    "rn": 7
+  },
+  {
+    "fonKodu": "AER",
+    "fonUnvan": "ANADOLU HAYAT EMEKLİLİK A.Ş. KATILIM KATKI EMEKLİLİK YATIRIM FONU",
+    "tarih": "2026-10-07",
+    "fiyat": 0.145077,
+    "tedPaySayisi": 17075133427.711,
+    "kisiSayisi": 587363,
+    "portfoyBuyukluk": 2477204504.57,
+    "borsaBultenFiyat": null,
+    "rn": 15
+  }
+]
