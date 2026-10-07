@@ -1,0 +1,42 @@
+name: TEFAS tarayıcı keşfi
+
+# TEFAS sayfasını başsız Chromium ile açar; API çağrılarını ve fon türü / katılım seçeneklerini kaydeder.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - tools/tefas_browser.mjs
+      - .github/workflows/tefas-browser.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tefas-browser
+  cancel-in-progress: false
+
+jobs:
+  browse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --no-save playwright@1.48.2 && npx playwright install --with-deps chromium
+      - run: node tools/tefas_browser.mjs
+      - name: Sonucu depoya yaz
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add docs/tefas_browser.md || true
+          if git diff --cached --quiet; then
+            echo "Değişiklik yok."
+          else
+            git commit -m "TEFAS tarayıcı keşfi sonuçları"
+            git pull --rebase origin main
+            git push
+          fi
