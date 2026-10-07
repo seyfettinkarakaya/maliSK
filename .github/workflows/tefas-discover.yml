@@ -1,0 +1,40 @@
+name: TEFAS keşfi
+
+# TEFAS sitesindeki API uç noktalarını ve fon türü / katılım etiketlerini arar.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - tools/tefas_discover.mjs
+      - .github/workflows/tefas-discover.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tefas-discover
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node tools/tefas_discover.mjs
+      - name: Sonucu depoya yaz
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add docs/tefas_discovery.md
+          if git diff --cached --quiet; then
+            echo "Değişiklik yok."
+          else
+            git commit -m "TEFAS keşfi sonuçları"
+            git pull --rebase origin main
+            git push
+          fi
