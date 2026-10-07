@@ -49,8 +49,9 @@ export const DEFAULT_PARAMS = {
       ['DÖVİZ', 'fx'],
     ],
     // İçerik alanı → kural. 'metal': gümüş fonunda Gümüş, diğerlerinde Altın;
-    // 'basket': fonun ana sınıfı; 'other': para piyasasında TL sabit, diğerlerinde Belirsiz.
-    // Ek A alan adları; TEFAS kısa kodları F0 canlı denemesinden sonra eklenir.
+    // 'basket': fonun ana sınıfı; 'other': para piyasasında TL sabit, diğerlerinde Belirsiz;
+    // 'interest': faizli araç (helal filtresi fonu dışarıda bırakır).
+    // Önce Ek A alan adları, sonra TEFAS kısa kodları (docs/data_fields.md).
     content_map: {
       precious_metal: 'metal',
       equity: 'equity_tr',
@@ -61,7 +62,30 @@ export const DEFAULT_PARAMS = {
       participation_fx: 'fx_fixed',
       fund_basket: 'basket',
       other: 'other',
+      // TEFAS
+      km: 'metal', kmbyf: 'metal', kmkks: 'metal', khau: 'metal',
+      hs: 'equity_tr',
+      yhs: 'equity_foreign', ybyf: 'equity_foreign',
+      kkstl: 'tl_fixed', osks: 'tl_fixed', khtl: 'tl_fixed', kh: 'tl_fixed', kks: 'tl_fixed', btaa: 'tl_fixed', btas: 'tl_fixed',
+      kksd: 'fx_fixed', kksyd: 'fx_fixed', oksyd: 'fx_fixed', khd: 'fx_fixed',
+      yyf: 'basket', byf: 'basket', fkb: 'basket',
+      gsykb: 'unclassified', gsyy: 'unclassified', gykb: 'unclassified', gyy: 'unclassified',
+      gas: 'unclassified', t: 'unclassified', vint: 'unclassified', ymk: 'unclassified',
+      d: 'other',
+      dt: 'interest', hb: 'interest', fb: 'interest', ost: 'interest', bb: 'interest', vdm: 'interest',
+      eut: 'interest', kibd: 'interest', osdb: 'interest', kba: 'interest', dot: 'interest', db: 'interest',
+      tpp: 'interest', bpp: 'interest', r: 'interest', tr: 'interest', vm: 'interest', vmtl: 'interest',
+      vmd: 'interest', vmau: 'interest', kmkba: 'interest', yba: 'interest', ybkb: 'interest', ybosb: 'interest',
     },
+    // Sınıf serisini temsil eden kategoriler (Bölüm 3). Yabancı hisse: ana sınıfı yabancı hisse olan fonlar.
+    class_categories: {
+      gold: ['gold'],
+      silver: ['silver'],
+      tl_fixed: ['money_market', 'lease_tl'],
+      equity_tr: ['equity'],
+      fx_fixed: ['fx'],
+    },
+    category_overrides: {},
     basket_unclassified_categories: ['mixed'],
     other_tl_categories: ['money_market'],
     passive_categories: ['gold', 'silver', 'precious_metals', 'money_market', 'lease_tl', 'fx'],

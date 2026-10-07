@@ -1,0 +1,54 @@
+name: Günlük veri
+
+# Hafta içi 10:30, 11:00 ve 11:30 (İstanbul). O gün başarılı çalışma varsa sonrakiler hemen çıkar.
+# İlk kurulumda Actions → Günlük veri → Run workflow → "backfill" işaretli: 5 yıllık geçmiş yüklenir.
+on:
+  schedule:
+    - cron: "30 7 * * 1-5"
+    - cron: "0 8 * * 1-5"
+    - cron: "30 8 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      backfill:
+        description: "5 yıllık eksik geçmişi de yükle"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Veriyi çek ve hesapla
+        run: |
+          if [ "${{ inputs.backfill }}" = "true" ]; then
+            node src/pipeline/update.mjs --backfill
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            node src/pipeline/update.mjs --skip-if-done
+          else
+            node src/pipeline/update.mjs
+          fi
+      - name: Veriyi depoya yaz
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "Değişiklik yok."
+          else
+            git commit -m "Veri: $(date -u +%Y-%m-%d)"
+            git pull --rebase origin main
+            git push
+          fi

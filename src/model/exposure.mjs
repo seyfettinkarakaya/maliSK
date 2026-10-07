@@ -26,6 +26,7 @@ export function fundExposure(fund, universe) {
   const out = emptyClasses();
   let basket = 0;
   let other = 0;
+  const interest = {};
   const unknown = [];
   for (const [field, raw] of Object.entries(fund.content || {})) {
     const v = Number(raw) || 0;
@@ -34,7 +35,10 @@ export function fundExposure(fund, universe) {
     if (rule === 'metal') out[fund.category === 'silver' ? 'silver' : 'gold'] += v;
     else if (rule === 'basket') basket += v;
     else if (rule === 'other') other += v;
-    else if (rule && rule in out) out[rule] += v;
+    else if (rule === 'interest') {
+      interest[field] = v;
+      out.tl_fixed += v;
+    } else if (rule && rule in out) out[rule] += v;
     else {
       out.unclassified += v;
       unknown.push(field);
@@ -47,7 +51,17 @@ export function fundExposure(fund, universe) {
   if (other) {
     out[universe.other_tl_categories.includes(fund.category) ? 'tl_fixed' : 'unclassified'] += other;
   }
-  return { exposure: out, unknown_fields: unknown };
+  return { exposure: out, unknown_fields: unknown, interest };
+}
+
+// Helal filtresi: adında KATILIM, faizli araç payı 0; beyaz liste her şeyi geçer, kara liste dışarıda bırakır.
+export function halalCheck(fund, interest, universe) {
+  if (universe.whitelist.includes(fund.code)) return { halal: true, reason: 'beyaz liste' };
+  if (universe.blacklist.includes(fund.code)) return { halal: false, reason: 'kara liste' };
+  if (!String(fund.name || '').toLocaleUpperCase('tr-TR').includes('KATILIM')) return { halal: false, reason: 'adında KATILIM yok' };
+  const fields = Object.entries(interest).filter(([, v]) => v > 0);
+  if (fields.length) return { halal: false, reason: 'faizli araç: ' + fields.map(([k, v]) => `${k} %${v}`).join(', ') };
+  return { halal: true, reason: null };
 }
 
 export function mainClass(exposure) {
