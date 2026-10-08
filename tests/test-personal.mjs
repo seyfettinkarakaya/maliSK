@@ -167,3 +167,20 @@ test('hedefe uzaklık: hedef üstü fazlaların toplamı', async () => {
   const { targetDistance } = await import('../src/model/tree.mjs');
   near(targetDistance({ a: 64.9, b: 22.1, c: 3.6, d: 4 }, { a: 35, b: 30, c: 30, d: 5 }), 29.9, 1e-9);
 });
+
+test('çekirdek: sözleşmeli durum, öneri ve günlük bildirim metni', async () => {
+  const { compute, dailyNotice } = await import('../src/app/engine.mjs');
+  const { GROUP_LABELS, CLASS_LABELS } = await import('../src/model/params.mjs');
+  const latest = market();
+  const state = { contracts: [{ no: '123', date: '2026-09-01', weights: { GLD: 80, MMF: 20 } }], shares: { date: '2026-09-01', values: { 123: 100 } }, anchor: { gold: 50, tl_fixed: 50 }, views: {}, decisions: [] };
+  const m = compute(latest, state, { withProposal: true });
+  assert.equal(m.param_version, String(P.version));
+  assert.ok(m.bands.distance > 0);
+  assert.equal(m.steps.length, 1);
+  const n = dailyNotice(m, GROUP_LABELS, CLASS_LABELS);
+  assert.equal(n.title, 'Dengeleme zamanı');
+  assert.match(n.body, /^Kıymetli maden fazla, TL sabit eksik\. 1 sözleşmede \d+ değişiklik\.$/);
+  // Eski tek dağılım da çalışır.
+  const old = compute(latest, { allocation: { date: '2026-09-01', weights: { GLD: 80, MMF: 20 } }, anchor: { gold: 50, tl_fixed: 50 } });
+  assert.ok(Math.abs(old.drift.current.GLD - m.drift.current.GLD) < 1e-9);
+});

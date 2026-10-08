@@ -124,6 +124,8 @@ async function main() {
     await daily();
   }
   compute();
+  // Bildirim adımı yalnız bu çalışma yeni hesap ürettiyse çalışır (günde bir bildirim).
+  if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, 'computed=true\n');
   log(`TEFAS isteği: ${client.requests}`);
 }
 

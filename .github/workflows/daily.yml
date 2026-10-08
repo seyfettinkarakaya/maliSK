@@ -31,6 +31,7 @@ jobs:
         with:
           node-version: "22"
       - name: Veriyi çek ve hesapla
+        id: update
         run: |
           if [ "${{ inputs.backfill }}" = "true" ]; then
             node src/pipeline/update.mjs --backfill
@@ -52,3 +53,9 @@ jobs:
             git pull --rebase origin main
             git push
           fi
+      - name: Telefona bildirim
+        # Anahtar telefonda üretilir, Settings → Secrets → Actions → MALISK_PUSH olarak eklenir.
+        if: steps.update.outputs.computed == 'true'
+        env:
+          MALISK_PUSH: ${{ secrets.MALISK_PUSH }}
+        run: node src/pipeline/push.mjs
