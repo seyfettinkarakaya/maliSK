@@ -1,0 +1,41 @@
+name: TEFAS fon türü denemesi
+
+# fonTurAciklama (TEFAS'ın fon türü) ve ücret alanlarını inceler.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - tools/tefas_types.mjs
+      - .github/workflows/tefas-types.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tefas-types
+  cancel-in-progress: false
+
+jobs:
+  types:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node tools/tefas_types.mjs
+      - name: Sonucu depoya yaz
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add docs/tefas_types.md docs/probe/tefas_types_sample.json || true
+          if git diff --cached --quiet; then
+            echo "Değişiklik yok."
+          else
+            git commit -m "TEFAS fon türü sonuçları"
+            git pull --rebase origin main
+            git push
+          fi
