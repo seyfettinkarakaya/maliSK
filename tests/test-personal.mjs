@@ -132,3 +132,38 @@ test('grup içi pay bandı: grup bant içindeyken gümüş payı tetikler', () =
   const small = bandHistory(latest, driftWeights(latest, { date: '2026-09-01', weights: { GLD: 2, SLV: 2, MMF: 96 } }), t, P);
   assert.equal(small.splits.precious_metals.silver.skipped, true);
 });
+
+test('sözleşmeler: toplam, kayan paylar ve tek sözleşmede eşdeğerlik', async () => {
+  const { combineContracts, migrateState, contractSteps } = await import('../src/app/personal.mjs');
+  const latest = market();
+  // Tek sözleşme = eski tek dağılım.
+  const one = combineContracts(latest, [{ no: '1', date: '2026-09-01', weights: { GLD: 50, MMF: 50 } }], { date: '2026-09-01', values: { 1: 100 } });
+  const d = driftWeights(latest, { date: '2026-09-01', weights: { GLD: 50, MMF: 50 } });
+  near(one.current.GLD, d.current.GLD, 1e-9);
+  near(one.return_pct, d.return_pct, 1e-9);
+  // İki sözleşme: altın ağırlıklı olanın payı fiyatla büyür.
+  const two = combineContracts(latest, [
+    { no: '123', date: '2026-09-01', weights: { GLD: 100 } },
+    { no: '456', date: '2026-09-01', weights: { MMF: 100 } },
+  ], { date: '2026-09-01', values: { 123: 50, 456: 50 } });
+  near(two.current.GLD, d.current.GLD, 1e-9);
+  near(two.shares_now['123'], d.current.GLD, 1e-9);
+  near(Object.values(two.current).reduce((a, b) => a + b, 0), 100, 1e-9);
+  // Paylar başka bir günde girilmişse o günden kayar.
+  const later = combineContracts(latest, [
+    { no: '123', date: '2026-09-01', weights: { GLD: 100 } },
+    { no: '456', date: '2026-09-01', weights: { MMF: 100 } },
+  ], { date: '2026-09-30', values: { 123: 50, 456: 50 } });
+  near(later.shares_now['123'], 50, 1e-9);
+  // Taşıma ve adımlar.
+  const m = migrateState({ allocation: { date: '2026-09-01', weights: { GLD: 60, MMF: 40 } } });
+  assert.deepEqual(m.contracts[0], { no: '1', date: '2026-09-01', weights: { GLD: 60, MMF: 40 } });
+  const steps = contractSteps(latest, two, { GLD: 40, MMF: 60 });
+  assert.equal(steps.length, 2);
+  assert.deepEqual(steps.find((x) => x.no === '123').steps.map((x) => [x.code, x.from, x.to]), [['GLD', 100, 40], ['MMF', 0, 60]]);
+});
+
+test('hedefe uzaklık: hedef üstü fazlaların toplamı', async () => {
+  const { targetDistance } = await import('../src/model/tree.mjs');
+  near(targetDistance({ a: 64.9, b: 22.1, c: 3.6, d: 4 }, { a: 35, b: 30, c: 30, d: 5 }), 29.9, 1e-9);
+});

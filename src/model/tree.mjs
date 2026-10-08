@@ -126,3 +126,9 @@ export function treeBandCheck(tree, a, exposure, groupTargets, d) {
   }
   return { group_exposure: gx, groups, splits, class_out };
 }
+
+// Hedefe uzaklık (docs/model.md, Bölüm 8): yönetilen grupların hedefin üstündeki fazlalarının toplamı.
+// Dengelemek için toplam birikimin yaklaşık bu kadar puanının başka fonlara taşınması gerekir.
+export function targetDistance(groupExposure, groupTargets) {
+  return Object.keys(groupTargets).reduce((s, g) => s + Math.max(0, (groupExposure[g] || 0) - groupTargets[g]), 0);
+}

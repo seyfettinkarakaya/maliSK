@@ -1,6 +1,6 @@
 # Claude Code için çalışma kuralları — maliSK
 
-Model: `docs/model.md` (sürüm 2.2). Mimari: `docs/mimari.md`.
+Model: `docs/model.md` (sürüm 2.3). Mimari: `docs/mimari.md`.
 
 - `docs/model.md`'deki formüller modelin kendisidir; değiştirmeden önce kullanıcıya sor.
 - Hiçbir ağırlık, eşik, süre veya oran koda gömülmez; hepsi `src/model/params.mjs`'den okunur.

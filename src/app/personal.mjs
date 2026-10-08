@@ -3,7 +3,7 @@
 import { CLASSES } from '../model/params.mjs';
 import { portfolioExposure } from '../model/exposure.mjs';
 import { compositeScore, tilt, viewLabel } from '../model/tactical.mjs';
-import { normalizeAnchor, classAnchor, treeTargets, treeBandCheck, groupOf } from '../model/tree.mjs';
+import { normalizeAnchor, classAnchor, treeTargets, treeBandCheck, groupOf, targetDistance } from '../model/tree.mjs';
 import { optimizeAllocation, roundLargestRemainder, noInstrumentGaps } from '../model/optimize.mjs';
 
 export const ANCHOR_CLASSES = ['gold', 'silver', 'tl_fixed', 'equity_tr', 'equity_foreign', 'fx_fixed'];
@@ -53,6 +53,75 @@ export function driftWeights(latest, allocation) {
     current: last.weights,
     return_pct: (last.value - 1) * 100,
   };
+}
+
+// ---------- Sözleşmeler (docs/model.md, Bölüm 9) ----------
+// contracts: [{ no, date, weights: { kod: yüzde } }]; shares: { date, values: { no: yüzde } } — sözleşmelerin
+// toplam birikimdeki payı, shares.date itibarıyla. Her sözleşme kendi fon fiyatlarıyla kayar; toplam, payların
+// o günden bu yana kaymasıyla ağırlıklandırılır. Sonuç driftWeights ile aynı biçimdedir.
+function valueAt(drift, date) {
+  let v = 1;
+  for (const p of drift.series) { if (p.date > date) break; v = p.value; }
+  return v;
+}
+
+export function combineContracts(latest, contracts, shares) {
+  const list = contracts.filter((c) => Object.keys(c.weights || {}).length);
+  const drifts = Object.fromEntries(list.map((c) => [c.no, driftWeights(latest, { date: c.date, weights: c.weights })]));
+  const raw = Object.fromEntries(list.map((c) => [c.no, Math.max(0, Number(shares?.values?.[c.no] ?? 0))]));
+  let tot = Object.values(raw).reduce((a, b) => a + b, 0);
+  if (!tot) { list.forEach((c) => { raw[c.no] = 1; }); tot = list.length; }
+  const s0 = Object.fromEntries(list.map((c) => [c.no, raw[c.no] / tot]));
+  const sd = shares?.date || latest.data_date;
+  const base = Object.fromEntries(list.map((c) => [c.no, valueAt(drifts[c.no], sd)]));
+  const start = list.map((c) => drifts[c.no].start_date).sort().pop();
+  const dates = latest.prices_tail.dates.filter((d) => d >= start);
+  const at = (drift, d) => drift.series.find((p) => p.date === d) || drift.series[drift.series.length - 1];
+  const series = dates.map((d) => {
+    const parts = list.map((c) => { const p = at(drifts[c.no], d); return [c.no, p, s0[c.no] * (p.value / base[c.no])]; });
+    const value = parts.reduce((a, [, , v]) => a + v, 0);
+    const weights = {};
+    const sharesNow = {};
+    for (const [no, p, v] of parts) {
+      sharesNow[no] = (v * 100) / value;
+      for (const [code, w] of Object.entries(p.weights)) weights[code] = (weights[code] || 0) + (v / value) * w;
+    }
+    return { date: d, weights, value, shares: sharesNow };
+  });
+  const v0 = series[0].value;
+  series.forEach((p) => { p.value /= v0; });
+  const last = series[series.length - 1];
+  return {
+    start_date: series[0].date,
+    stale: list.some((c) => drifts[c.no].stale),
+    missing: [...new Set(list.flatMap((c) => drifts[c.no].missing))],
+    series,
+    current: last.weights,
+    shares_now: last.shares,
+    return_pct: (last.value - 1) * 100,
+    contracts: drifts,
+  };
+}
+
+// Eski tek dağılımı sözleşme yapısına taşır.
+export function migrateState(state) {
+  if (state.contracts?.length || !state.allocation) return state;
+  return { ...state, contracts: [{ no: '1', date: state.allocation.date, weights: state.allocation.weights }], shares: { date: state.allocation.date, values: { 1: 100 } } };
+}
+
+// Öneri tüm sözleşmelere aynı oranlarla uygulanır (karar b). Her sözleşme için mevcut → yeni adımlar ve
+// önerilen fon sözleşmenin şirketinde yoksa uyarı (fon kurucusu farklıysa).
+export function contractSteps(latest, combined, proposalWeights) {
+  const funds = fundIndex(latest);
+  return Object.entries(combined.contracts).map(([no, d]) => {
+    const founders = [...new Set(Object.keys(d.current).map((c) => funds[c]?.founder).filter(Boolean))];
+    const codes = [...new Set([...Object.keys(d.current), ...Object.keys(proposalWeights)])];
+    const steps = codes.map((code) => ({ code, from: d.current[code] ?? 0, to: proposalWeights[code] ?? 0 }))
+      .filter((x) => Math.round(x.from) !== x.to).sort((a, b) => (a.to - a.from) - (b.to - b.from));
+    const keep = codes.filter((code) => Math.round(d.current[code] ?? 0) === (proposalWeights[code] ?? 0) && proposalWeights[code]);
+    const foreign = Object.keys(proposalWeights).filter((c) => founders.length === 1 && funds[c]?.founder && funds[c].founder !== founders[0]);
+    return { no, share: combined.shares_now[no], steps, keep, foreign };
+  });
 }
 
 // Hedef (docs/model.md, Bölüm 5): sınıf görüşü S = 0,50·T + 0,25·M + 0,25·K; grup görüşü
@@ -112,7 +181,8 @@ export function bandHistory(latest, drift, targets, params) {
     counters[key] = n;
   }
   const history = days.map((d) => ({ date: d.date, group_exposure: d.check.group_exposure }));
-  return { exposure: today.exposure, ...today.check, counters, history, days_observed: days.length };
+  const distance = targetDistance(today.check.group_exposure, targets.group_targets);
+  return { exposure: today.exposure, ...today.check, counters, history, distance, days_observed: days.length };
 }
 
 function businessDaysBetween(a, b) {

@@ -1,4 +1,4 @@
-# maliSK modeli — sürüm 2.2
+# maliSK modeli — sürüm 2.3
 
 **Tarih:** 8 Ekim 2026 · **Sahibi:** Seyfettin · Kaynak: BES Fon Danışmanı spesifikasyonu 2.0
 ve 7–8 Ekim 2026 tarihli model görüşmelerindeki kararlar (en altta değişiklik günlüğü).
@@ -156,6 +156,14 @@ puanlanmaz, en çok %5 ağırlık alır.
   mevcut fon, aynı kategorideki adayla ancak puan farkı ≥ 20 ise değiştirilir.
 - **Durumlar:** aktif → kullanıcı "uygulandı" (yeni dağılımı girer, sayaçlar sıfırlanır) veya
   "reddedildi" (sayaçlar sıfırlanır, aynı öneri 20 iş günü tekrarlanmaz).
+- **Hedefe uzaklık:** `Σ_g max(0, maruziyet_g − hedef_g)`, yönetilen gruplar üzerinden. Dengelemek için
+  toplam birikimin yaklaşık bu kadar puanının başka fonlara taşınması gerekir.
+- **Sözleşmeler:** kullanıcının birden çok BES sözleşmesi olabilir; her biri numarasıyla ayrı girilir
+  (fon kodu, yüzde). Sözleşmelerin toplam birikimdeki payları bir gün itibarıyla yüzde olarak girilir; sonra
+  her sözleşme kendi fon fiyatlarıyla kayar ve paylar `pay_c(t) ∝ pay_c(t₀) · V_c(t) / V_c(t₀)` ile güncellenir.
+  Toplam fon ağırlığı `Σ_c pay_c(t) · w_(c,f)(t)`. Bant, sayaç ve öneri **toplam** üzerinden hesaplanır;
+  öneri tek bir fon dağılımıdır ve tüm sözleşmelere aynı oranlarla uygulanır (karar b, 8 Ekim 2026).
+  Önerilen fonun kurucusu sözleşmedeki fonlarınkinden farklıysa uyarı gösterilir.
 - **Acil uyarı:** sınıfın 20 iş günlük düşüşü `2,5 · σ_yıllık · √(20 / 252)` eşiğini aşarsa.
   İnceleme çağrısıdır, dağılım önerisi değildir.
 
@@ -195,6 +203,15 @@ Ek A'daki 8 fonla, yılbaşı = 9 ay:
   fazla getiri.
 - Hak sayacı, Google Sheet, TL tutar ve XIRR ilk sürümden çıkarıldı. Ledoit-Wolf kapalı (Ö2).
 - Çapada olmayan sınıf izlenir (kullanıcı onayladı, 8 Ekim 2026).
+
+### 2.2 → 2.3 (8 Ekim 2026, kullanıcı onayı)
+
+- Birden çok sözleşme; toplam üzerinden tek öneri, tüm sözleşmelere aynı oranlar.
+- Hedefe uzaklık göstergesi.
+- Onaylanan kurallar: grup %5'ten küçükse grup içi pay denetlenmez; önerisi olmayan sınıfın grup içi payı
+  çapa taslağında şu anki dağılımdaki orandan alınır; devlet katkısı ve merkezi alacak devri fonları öneriye
+  aday olmaz.
+- Telefonda uygulanan parametreler uygulamadan değiştirilebilir; her kayıt yeni parametre sürümüdür.
 
 ### 2.1 → 2.2 (8 Ekim 2026, kullanıcı onayı)
 
