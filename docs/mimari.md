@@ -33,3 +33,15 @@ Depoda kişisel veri yok; bu yüzden depo herkese açık ve GitHub Pages ücrets
 - **Actions zamanlaması garanti değil.** Kartta veri tarihi ve çalışma saati her zaman görünür.
 - **Telefondaki veri.** Ana ekrana eklenen uygulamada düzenli kullanımda veriler korunur;
   yine de JSON yedek önerilir.
+
+## Bildirim (Web Push)
+
+- Telefonda Ayarlar → Bildirimler açılınca uygulama bir P-256 anahtar çifti üretir, Web Push aboneliği
+  açar ve "bildirim anahtarı"nı (abonelik + özel anahtar) gösterir. Kullanıcı bunu GitHub'da
+  Settings → Secrets and variables → Actions → `MALISK_PUSH` olarak bir kez ekler. Anahtar depoya,
+  koda ya da loglara yazılmaz.
+- Günlük iş yeni veri hesapladığında `src/pipeline/push.mjs` sitenin güncellenmesini bekler ve telefona
+  şifreli (aes128gcm, VAPID) kısa bir sinyal gönderir. Sinyalde kişisel veri yoktur.
+- `sw.js` sinyal gelince güncel `latest.json`'u indirir, kişisel durumu IndexedDB kopyasından okur ve
+  bildirimi `src/app/engine.mjs` ile telefonda hesaplar. Dağılım telefondan çıkmaz.
+- Kapatınca abonelik iptal edilir; sonraki gönderim 404/410 alır ve atlanır.

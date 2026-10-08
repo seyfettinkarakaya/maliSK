@@ -13,13 +13,18 @@ export function buildPrompt({ latest, state, drift, targets, bands, due, proposa
   L.push('Yatırım tavsiyesi değil karar desteği istiyorum; gerekçeni ve emin olmadığın noktaları açıkça yaz.');
   L.push('');
   if (drift) {
-    L.push(`## Dağılımım (giriş ${state.allocation.date}, bugün fiyatla kaymış hâli)`);
+    const contracts = state.contracts?.length ? state.contracts : state.allocation ? [{ no: '1', date: state.allocation.date, weights: state.allocation.weights }] : [];
+    L.push('## Dağılımım (toplam, bugün fiyatla kaymış hâli)');
     for (const [code, w] of Object.entries(drift.current).sort((a, b) => b[1] - a[1])) {
       const f = funds[code];
       const nm = f ? fundNames(f.name).short : '';
-      L.push(`- ${code} ${nm}${f?.tefas_type ? ` [${f.tefas_type}]` : ''}: girişte %${num(state.allocation.weights[code], 1)}, bugün %${num(w, 1)}` + (f?.score !== null && f?.score !== undefined ? `, puan ${num(f.score, 0)} (${f.rank}/${f.peers})` : '') + (f?.fee !== null && f?.fee !== undefined ? `, ücret %${num(f.fee, 2)}` : ''));
+      L.push(`- ${code} ${nm}${f?.tefas_type ? ` [${f.tefas_type}]` : ''}: bugün %${num(w, 1)}` + (f?.score !== null && f?.score !== undefined ? `, puan ${num(f.score, 0)} (${f.rank}/${f.peers})` : '') + (f?.fee !== null && f?.fee !== undefined ? `, ücret %${num(f.fee, 2)}` : ''));
     }
-    L.push(`Giriş tarihinden bu yana dağılımın getirisi: ${pct(drift.return_pct, 1)}.`);
+    if (contracts.length > 1) {
+      L.push('Sözleşmeler (toplamdaki pay):');
+      for (const c of contracts) L.push(`- ${c.no}: %${num(drift.shares_now?.[c.no] ?? 0, 1)} · ` + Object.entries(c.weights).map(([k, v]) => `${k} %${num(v, 0)}`).join(', ') + ` (${c.date})`);
+    }
+    L.push(`Başlangıçtan bu yana toplam getiri: ${pct(drift.return_pct, 1)}.`);
     L.push('');
   }
   if (targets) {
