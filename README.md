@@ -25,7 +25,7 @@ dağılımımı değiştirmeli miyim. Son karar kullanıcınındır.
 | `data/` | Günlük işin yazdığı veri (`latest.json` telefonun okuduğu özet) |
 | `tests/` | Kabul ve birim testleri (`npm test`) |
 | `tools/probe.py` | Canlı veri denemesi: TEFAS, EVDS, FRED alan adları |
-| `docs/model.md` | Model, sürüm 2.1 |
+| `docs/model.md` | Model, sürüm 2.2 |
 | `docs/mimari.md` | Mimari ve bilinen riskler |
 
 ## Anahtarlar (isteğe bağlı)

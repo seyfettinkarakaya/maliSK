@@ -107,7 +107,7 @@ export function applyCap(weights, cap) {
 
 // cov: riskli sınıfların yıllık kovaryansı (oran). Sonuç yüzde; TL sabit kalan pay.
 export function anchorSuggestion(cov, ids, a, { real_rate_pct = null } = {}) {
-  const { weights: rw, groups } = hierarchicalErc(cov, ids, a.groups);
+  const { weights: rw, groups } = hierarchicalErc(cov, ids, a.groups ?? (a.tree || []).map((g) => g.classes));
   const risky_vol_pct = portfolioVol(ids.map((id) => rw[id]), cov) * 100;
   const k = Math.min(1, a.target_vol_pct / risky_vol_pct);
   let risky = Object.fromEntries(ids.map((id) => [id, rw[id] * k * 100]));

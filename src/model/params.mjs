@@ -13,6 +13,14 @@ export const CLASS_LABELS = {
   unclassified: 'Belirsiz',
 };
 
+// Çapa ağacı (docs/model.md, Bölüm 4): 1. katman grup, 2. katman grup içi pay.
+export const GROUP_LABELS = {
+  precious_metals: 'Kıymetli maden',
+  equity: 'Hisse',
+  tl_fixed: 'TL sabit',
+  fx: 'Döviz',
+};
+
 export const CATEGORY_LABELS = {
   gold: 'Altın',
   silver: 'Gümüş',
@@ -30,7 +38,7 @@ export const CATEGORY_LABELS = {
 };
 
 export const DEFAULT_PARAMS = {
-  version: 1,
+  version: 2,
   general: {
     run_time: '10:30',
     settlement_days: 1,
@@ -127,8 +135,13 @@ export const DEFAULT_PARAMS = {
     class_cap_pct: 40,
     shrinkage: 'none', // Ö2: ilk fazda kapalı
     // Kullanıcının seçtiği gruplar; uygulama verilerden ayrıca öneri üretir.
-    // Döviz sabit ayrı grup (kullanıcı kararı, 8 Ekim 2026): grupta olmayan sınıf tek başına grup olur.
-    groups: [['gold', 'silver'], ['equity_tr', 'equity_foreign']],
+    // Çapa ağacı: hedef, bant ve risk eşitliği bu gruplarla kurulur. Döviz ayrı grup (kullanıcı kararı, 8 Ekim 2026).
+    tree: [
+      { id: 'precious_metals', classes: ['gold', 'silver'] },
+      { id: 'equity', classes: ['equity_tr', 'equity_foreign'] },
+      { id: 'tl_fixed', classes: ['tl_fixed'] },
+      { id: 'fx', classes: ['fx_fixed'] },
+    ],
     min_funds_per_class: 3,
     tl_fixed_factor_negative_real_rate: 0.5,
   },
@@ -182,5 +195,9 @@ export const DEFAULT_PARAMS = {
     switch_score_gap: 20,
     alert_sigma_mult: 2.5,
     alert_window_days: 20,
+    // Grup içi pay bandı: sınıfın grup içindeki payı hedef paydan bu kadar puan saparsa bant dışı.
+    split_band_pts: 10,
+    // Grup portföyün bu yüzdesinden küçükse grup içi pay denetlenmez (küçük payda gürültü).
+    split_min_group_pct: 5,
   },
 };

@@ -48,12 +48,14 @@ test('hedef, bant sayacı ve öneri', () => {
   const latest = market();
   const anchor = { gold: 50, tl_fixed: 50 };
   const t = targetsToday(latest, anchor, {}, P);
-  // Altın T = 1 → S = 0,5 → eğim +5 → (55, 50) → 100'e ölçek.
+  // Altın T = 1 → S = 0,5 → kıymetli maden grubunun eğimi +5 → (55, 50) → 100'e ölçek.
   near(t.targets.gold, (55 * 100) / 105, 1e-9);
+  near(t.group_targets.precious_metals, (55 * 100) / 105, 1e-9);
   const drift = driftWeights(latest, { date: '2026-09-01', weights: { GLD: 50, MMF: 50 } });
-  const bands = bandHistory(latest, drift, t.targets, P);
-  assert.equal(bands.check.gold.status, 'above');
-  assert.ok(bands.counters.gold >= 1 && bands.counters.gold <= 30);
+  const bands = bandHistory(latest, drift, t, P);
+  assert.equal(bands.groups.precious_metals.status, 'above');
+  assert.equal(bands.class_out.gold, true);
+  assert.ok(bands.counters['group:precious_metals'] >= 1 && bands.counters['group:precious_metals'] <= 30);
   const due = recommendationDue({ counters: { gold: 20 } }, [], '2026-09-30', P);
   assert.equal(due.active, true);
   const rejected = recommendationDue({ counters: { gold: 20 } }, [{ date: '2026-09-25', action: 'reddedildi' }], '2026-09-30', P);
@@ -70,10 +72,10 @@ test('Claude metni ve biçimler', () => {
   const state = { allocation: { date: '2026-09-01', weights: { GLD: 50, MMF: 50 } } };
   const drift = driftWeights(latest, state.allocation);
   const targets = targetsToday(latest, { gold: 50, tl_fixed: 50 }, {}, P);
-  const bands = bandHistory(latest, drift, targets.targets, P);
+  const bands = bandHistory(latest, drift, targets, P);
   const text = buildPrompt({ latest, state, drift, targets, bands, due: null, proposal: null });
   assert.match(text, /GLD/);
-  assert.match(text, /Altın: maruziyet/);
+  assert.match(text, /Kıymetli maden: maruziyet/);
   assert.deepEqual(fundNames('TÜRKİYE HAYAT VE EMEKLİLİK A.Ş. ALTIN KATILIM EMEKLİLİK YATIRIM FONU'), { short: 'Altın Katılım', company: 'Türkiye' });
   assert.equal(pct(-0.94, 1), '−%0,9');
 });
@@ -86,4 +88,47 @@ test('çapada olmayan sınıf izlenir: hedefi yok, kalan paya ölçek', () => {
   near(t.targets.gold + t.targets.tl_fixed, 80, 1e-9);
   assert.equal('silver' in t.targets, false);
   assert.equal(t.rows.silver.managed, false);
+});
+
+test('çapa ağacı: eğim yalnız grupta, grup içi pay sabit', () => {
+  const latest = market();
+  latest.classes.silver = { trend: { T: -1 } };
+  const anchor = { groups: { precious_metals: 40, equity: 30, tl_fixed: 25, fx: 5 }, splits: { precious_metals: { gold: 85, silver: 15 }, equity: { equity_tr: 70, equity_foreign: 30 } } };
+  const t = targetsToday(latest, anchor, {}, P);
+  // S_grup = 0,85·0,5 + 0,15·(−0,5) = 0,35 → eğim 3,5; toplam 103,5'e göre ölçek.
+  near(t.groups.precious_metals.S, 0.35, 1e-12);
+  near(t.group_targets.precious_metals, (43.5 * 100) / 103.5, 1e-9);
+  near(t.targets.gold / t.group_targets.precious_metals, 0.85, 1e-12);
+  near(t.targets.silver / t.group_targets.precious_metals, 0.15, 1e-12);
+  near(Object.values(t.targets).reduce((a, b) => a + b, 0), 100, 1e-9);
+});
+
+test('çapa ağacı: düz çapa ağaca çevrilir, eksik sınıf izlenir', () => {
+  const latest = market();
+  const t = targetsToday(latest, { gold: 34, tl_fixed: 33, equity_tr: 21, equity_foreign: 9, fx_fixed: 3 }, {}, P, { silver: 10, gold: 50, tl_fixed: 40 });
+  assert.deepEqual(t.anchor.splits.precious_metals, { gold: 100 });
+  near(t.anchor.splits.equity.equity_tr, 70, 1e-12);
+  assert.deepEqual(t.unmanaged, ['silver']);
+  near(Object.values(t.targets).reduce((a, b) => a + b, 0), 90, 1e-9);
+});
+
+test('grup içi pay bandı: grup bant içindeyken gümüş payı tetikler', () => {
+  const latest = market();
+  latest.classes.gold = { trend: { T: 0 } };
+  latest.funds.push({ code: 'SLV', name: 'S', category: 'silver', halal: true, main_class: 'silver', exposure: expo({ silver: 100 }), score: 60, rank: 1, peers: 1, flags: [] });
+  latest.prices_tail.prices.SLV = latest.prices_tail.dates.map(() => 1);
+  latest.prices_tail.prices.GLD = latest.prices_tail.dates.map(() => 1);
+  const anchor = { groups: { precious_metals: 40, tl_fixed: 60 }, splits: { precious_metals: { gold: 85, silver: 15 } } };
+  const t = targetsToday(latest, anchor, {}, P);
+  const drift = driftWeights(latest, { date: '2026-09-01', weights: { GLD: 28, SLV: 12, MMF: 60 } });
+  const b = bandHistory(latest, drift, t, P);
+  assert.equal(b.groups.precious_metals.status, 'inside');
+  near(b.splits.precious_metals.silver.value, 30, 1e-9);
+  assert.equal(b.splits.precious_metals.silver.status, 'above');
+  assert.equal(b.class_out.silver, true);
+  assert.equal(b.counters['split:precious_metals'], 30);
+  assert.equal(recommendationDue(b, [], '2026-09-30', P).due.includes('split:precious_metals'), true);
+  // Grup portföyün %5'inden küçükse pay denetlenmez.
+  const small = bandHistory(latest, driftWeights(latest, { date: '2026-09-01', weights: { GLD: 2, SLV: 2, MMF: 96 } }), t, P);
+  assert.equal(small.splits.precious_metals.silver.skipped, true);
 });

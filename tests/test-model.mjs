@@ -112,7 +112,7 @@ test('Risk eşitliği: köşegen kovaryansta ters oynaklık, genel durumda eşit
 test('S: iki katmanlı risk eşitliğinde grupların risk payı eşit', () => {
   const ids = ['gold', 'silver', 'fx_fixed', 'equity_tr', 'equity_foreign'];
   const cov = seededCov(5, 7);
-  const { weights } = hierarchicalErc(cov, ids, P.anchor.groups);
+  const { weights } = hierarchicalErc(cov, ids, P.anchor.tree.map((g) => g.classes));
   const w = ids.map((id) => weights[id]);
   near(w.reduce((a, b) => a + b, 0), 1, 1e-9);
   const rc = riskContributions(w, cov);

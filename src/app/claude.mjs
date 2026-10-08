@@ -1,5 +1,5 @@
 // "Claude'a danış": günün özetini, dağılımı ve öneriyi Claude'a yapıştırılacak bir metne çevirir.
-import { CLASS_LABELS } from '../model/params.mjs';
+import { CLASS_LABELS, GROUP_LABELS } from '../model/params.mjs';
 import { ANCHOR_CLASSES } from './personal.mjs';
 import { num, pct, signed, fundNames } from './format.mjs';
 
@@ -23,16 +23,20 @@ export function buildPrompt({ latest, state, drift, targets, bands, due, proposa
     L.push('');
   }
   if (targets) {
-    L.push('## Varlık sınıfları: maruziyet, hedef, bant');
+    L.push('## Çapa ağacı: grup maruziyeti, hedef, bant (görüş yalnız grubu kaydırır)');
+    for (const [g, r] of Object.entries(targets.groups)) {
+      const b = bands?.groups[g];
+      L.push(`- ${GROUP_LABELS[g]}: maruziyet ${b ? num(b.value, 1) : '—'}, çapa ${num(r.anchor, 1)}, eğim ${signed(r.tilt, 1)} (S ${signed(r.S, 2)}), hedef ${num(r.target, 1)}, bant ${b ? `${num(b.low, 1)}–${num(b.high, 1)}` : '—'}, bant dışı ${bands?.counters['group:' + g] ?? 0} iş günü`);
+      const sp = bands?.splits[g];
+      if (r.classes.length > 1) {
+        L.push('  - Grup içi pay: ' + r.classes.map((c) => `${CLASS_LABELS[c]} ${sp ? num(sp[c].value, 0) : '—'} (hedef ${num(r.splits[c], 0)}, bant ${sp ? `${num(sp[c].low, 0)}–${num(sp[c].high, 0)}` : '—'})`).join(', ')
+          + (sp ? `, bant dışı ${bands.counters['split:' + g] ?? 0} iş günü` : ''));
+      }
+    }
+    L.push('Sınıf görüşleri:');
     for (const c of ANCHOR_CLASSES) {
       const r = targets.rows[c];
-      const b = bands?.check[c];
-      const view = `görüş ${VIEW[r.label]} (S ${signed(r.S, 2)} = 0,5·T ${signed(r.T, 2)} + 0,25·M ${signed(r.M, 0)} + 0,25·K ${signed(r.K, 0)})`;
-      if (!r.managed) {
-        L.push(`- ${CLASS_LABELS[c]}: maruziyet ${bands ? num(bands.exposure[c], 1) : '—'}, çapada yok (izleniyor); ${view}`);
-        continue;
-      }
-      L.push(`- ${CLASS_LABELS[c]}: maruziyet ${b ? num(b.value, 1) : '—'}, çapa ${num(r.anchor, 1)}, eğim ${signed(r.tilt, 1)}, hedef ${num(r.target, 1)}, bant ${b ? `${num(b.low, 1)}–${num(b.high, 1)}` : '—'}, bant dışı ${bands?.counters[c] ?? 0} iş günü; ${view}`);
+      L.push(`- ${CLASS_LABELS[c]}: ${VIEW[r.label]} (S ${signed(r.S, 2)} = 0,5·T ${signed(r.T, 2)} + 0,25·M ${signed(r.M, 0)} + 0,25·K ${signed(r.K, 0)})${r.managed ? `, hedef ${num(r.target, 1)}` : ', çapada yok (izleniyor)'}${bands ? `, maruziyet ${num(bands.exposure[c], 1)}` : ''}`);
     }
     if (bands) L.push(`- Belirsiz: ${num(bands.exposure.unclassified, 1)}`);
     L.push('');

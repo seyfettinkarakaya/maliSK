@@ -2,8 +2,8 @@
 // Girdi: data/latest.json (piyasa tarafı) + kullanıcının dağılımı, çapası ve görüşleri.
 import { CLASSES } from '../model/params.mjs';
 import { portfolioExposure } from '../model/exposure.mjs';
-import { compositeScore, tilt, targetsFromAnchor, viewLabel } from '../model/tactical.mjs';
-import { bandCheck } from '../model/bands.mjs';
+import { compositeScore, tilt, viewLabel } from '../model/tactical.mjs';
+import { normalizeAnchor, classAnchor, treeTargets, treeBandCheck, groupOf } from '../model/tree.mjs';
 import { optimizeAllocation, roundLargestRemainder, noInstrumentGaps } from '../model/optimize.mjs';
 
 export const ANCHOR_CLASSES = ['gold', 'silver', 'tl_fixed', 'equity_tr', 'equity_foreign', 'fx_fixed'];
@@ -55,33 +55,33 @@ export function driftWeights(latest, allocation) {
   };
 }
 
-export const isManaged = (anchor, cls) => typeof anchor?.[cls] === 'number' && Number.isFinite(anchor[cls]);
-
-// Hedef = çapa + eğim(S); S = 0,50·T + 0,25·M + 0,25·K.
+// Hedef (docs/model.md, Bölüm 5): sınıf görüşü S = 0,50·T + 0,25·M + 0,25·K; grup görüşü
+// S_g = Σ grup içi pay · S; eğim yalnız gruba uygulanır, grup içi pay çapadaki gibi kalır.
 // Çapada değeri olmayan sınıf "izlenir": hedefi ve bandı yoktur, mevcut payı korunur;
-// yönetilen sınıfların hedefleri (100 − izlenen sınıfların mevcut payı)'na ölçeklenir.
+// yönetilen grupların hedefleri (100 − izlenen sınıfların mevcut payı)'na ölçeklenir.
+// anchor: ağaç biçimi { groups, splits } ya da eski düz { sınıf: yüzde }.
 export function targetsToday(latest, anchor, views, params, exposure = null) {
   const t = params.tactical;
+  const tree = params.anchor.tree;
+  const a = normalizeAnchor(tree, anchor);
+  const ca = classAnchor(tree, a);
   const rows = {};
-  const tilts = {};
-  const managed = ANCHOR_CLASSES.filter((c) => isManaged(anchor, c));
-  const unmanaged = ANCHOR_CLASSES.filter((c) => !isManaged(anchor, c));
+  const classS = {};
   for (const cls of ANCHOR_CLASSES) {
     const c = latest.classes[cls] || {};
     const T = c.trend?.T ?? 0;
     const M = c.macro ?? 0;
     const K = views[cls] ?? 0;
     const S = compositeScore({ trend: T, macro: M, user: K }, t.weights);
-    tilts[cls] = tilt(S, t);
-    rows[cls] = { T, M, K, S, tilt: tilts[cls], label: viewLabel(S, t), anchor: isManaged(anchor, cls) ? anchor[cls] : null, managed: isManaged(anchor, cls), target: null };
+    classS[cls] = S;
+    const managed = cls in ca;
+    rows[cls] = { T, M, K, S, tilt: tilt(S, t), label: viewLabel(S, t), group: groupOf(tree, cls), anchor: managed ? ca[cls] : null, managed, target: null };
   }
+  const unmanaged = ANCHOR_CLASSES.filter((c) => !rows[c].managed);
   const unmanagedShare = exposure ? unmanaged.reduce((s, c) => s + (exposure[c] || 0), 0) : 0;
-  const scale = (100 - unmanagedShare) / 100;
-  const base = targetsFromAnchor(Object.fromEntries(managed.map((c) => [c, anchor[c]])), tilts);
-  const targets = Object.fromEntries(managed.map((c) => [c, base[c] * scale]));
-  const rawSum = managed.reduce((s, c) => s + Math.max(0, anchor[c] + tilts[c]), 0);
-  for (const c of managed) rows[c].target = targets[c];
-  return { rows, targets, unmanaged, unmanaged_share: unmanagedShare, raw_sum: rawSum };
+  const tt = treeTargets(tree, a, classS, t, unmanagedShare);
+  for (const c of Object.keys(tt.targets)) rows[c].target = tt.targets[c];
+  return { anchor: a, rows, groups: tt.groups, group_targets: tt.group_targets, targets: tt.targets, unmanaged, unmanaged_share: unmanagedShare, raw_sum: tt.raw_sum };
 }
 
 export function currentExposure(latest, weights) {
@@ -90,25 +90,28 @@ export function currentExposure(latest, weights) {
   return portfolioExposure(weights, exposures);
 }
 
-// Her gün için maruziyet ve bant durumu; sayaç = sondan geriye kesintisiz bant dışı gün sayısı.
-// Not: geçmiş günler bugünün hedefiyle değerlendirilir (ilk sürüm sadeleştirmesi).
+// Her gün için maruziyet ve iki düzeyli bant durumu. Sayaçlar ('group:<grup>', 'split:<grup>') =
+// sondan geriye kesintisiz bant dışı gün sayısı. Geçmiş günler bugünün hedefiyle değerlendirilir.
 export function bandHistory(latest, drift, targets, params) {
   const funds = fundIndex(latest);
+  const tree = params.anchor.tree;
   const exposures = Object.fromEntries(Object.keys(drift.current).map((c) => [c, funds[c]?.exposure]).filter(([, e]) => e));
-  const days = drift.series.map((s) => ({ date: s.date, exposure: portfolioExposure(s.weights, exposures) }));
+  const days = drift.series.map((s) => {
+    const exposure = portfolioExposure(s.weights, exposures);
+    return { date: s.date, exposure, check: treeBandCheck(tree, targets.anchor, exposure, targets.group_targets, params.decision) };
+  });
   const today = days[days.length - 1];
-  const check = bandCheck(today.exposure, targets, params.decision);
+  const keys = [
+    ...Object.keys(targets.group_targets).map((g) => ['group:' + g, (ck) => ck.groups[g].status !== 'inside']),
+    ...Object.keys(today.check.splits).map((g) => ['split:' + g, (ck) => Object.values(ck.splits[g] || {}).some((x) => x.status !== 'inside')]),
+  ];
   const counters = {};
-  for (const cls of Object.keys(targets)) {
+  for (const [key, out] of keys) {
     let n = 0;
-    for (let i = days.length - 1; i >= 0; i--) {
-      const st = bandCheck(days[i].exposure, { [cls]: targets[cls] }, params.decision)[cls].status;
-      if (st === 'inside') break;
-      n++;
-    }
-    counters[cls] = n;
+    for (let i = days.length - 1; i >= 0 && out(days[i].check); i--) n++;
+    counters[key] = n;
   }
-  return { exposure: today.exposure, check, counters, days_observed: days.length };
+  return { exposure: today.exposure, ...today.check, counters, days_observed: days.length };
 }
 
 function businessDaysBetween(a, b) {
@@ -120,7 +123,7 @@ function businessDaysBetween(a, b) {
   return n;
 }
 
-// Öneri koşulu: bir sınıfın sayacı teyit süresine ulaştı ve son 20 iş gününde reddedilmiş öneri yok.
+// Öneri koşulu: bir grubun ya da grup içi payın sayacı teyit süresine ulaştı ve son 20 iş gününde reddedilmiş öneri yok.
 export function recommendationDue(bands, decisions, today, params) {
   const due = Object.entries(bands.counters).filter(([, n]) => n >= params.decision.confirm_days).map(([c]) => c);
   const lastReject = decisions.filter((d) => d.action === 'reddedildi').map((d) => d.date).sort().pop();
@@ -128,7 +131,7 @@ export function recommendationDue(bands, decisions, today, params) {
   return { due, suppressed: !!suppressed, active: due.length > 0 && !suppressed };
 }
 
-// Eylem önerisi: bant içindeki sınıfların fonları sabit; aynı kategorideki aday ancak puanı ≥ 20 yüksekse değiştirir.
+// Eylem önerisi: ana sınıfı (grubu ve grup içi payı) bant içindeki fonlar sabit; aynı kategorideki aday ancak puanı ≥ 20 yüksekse değiştirir.
 export function buildProposal(latest, current, bands, targets, params) {
   const funds = fundIndex(latest);
   const gap = params.decision.switch_score_gap;
@@ -143,8 +146,7 @@ export function buildProposal(latest, current, bands, targets, params) {
   for (const [code, w] of Object.entries(current)) {
     const f = funds[code];
     candidates.add(code);
-    const st = f && bands.check[f.main_class]?.status;
-    if (!f || !st || st === 'inside') {
+    if (!f || !bands.class_out[f.main_class]) {
       bounds[code] = [w, w];
       notes.push({ code, kind: 'sabit', text: f ? 'ana sınıfı bant içinde' : 'veride yok' });
     } else if (f.flags.includes('yeni_fon')) {

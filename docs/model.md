@@ -1,7 +1,7 @@
-# maliSK modeli — sürüm 2.1
+# maliSK modeli — sürüm 2.2
 
-**Tarih:** 7 Ekim 2026 · **Sahibi:** Seyfettin · Kaynak: BES Fon Danışmanı spesifikasyonu 2.0
-ve 7 Ekim 2026 tarihli model görüşmesindeki kararlar (en altta değişiklik günlüğü).
+**Tarih:** 8 Ekim 2026 · **Sahibi:** Seyfettin · Kaynak: BES Fon Danışmanı spesifikasyonu 2.0
+ve 7–8 Ekim 2026 tarihli model görüşmelerindeki kararlar (en altta değişiklik günlüğü).
 
 Formüller modelin kendisidir; değiştirmeden önce kullanıcıya sorulur. Tüm sayısal değerler
 parametredir (`src/model/params.mjs`); burada yazanlar varsayılandır.
@@ -59,12 +59,18 @@ Her iş günü: dağılımım ne durumda, piyasa ve fonlar ne söylüyor, dağı
 Uygulama çapayı önerir; kullanıcı kendi çapasını Ayarlar'da girer. Bantlar ve hedefler
 **kullanıcının çapasıyla** hesaplanır.
 
+**Çapa ağacı (iki katman).** 1. katman gruplar: Kıymetli maden (Altın, Gümüş), Hisse (Yurtiçi,
+Yabancı), TL sabit, Döviz (Döviz sabit). 2. katman grup içi pay: Altın/Gümüş, Yurtiçi/Yabancı.
+Kullanıcı grup yüzdelerini (toplam 100) ve grup içi payları (grup başına toplam 100) girer.
+Sınıf çapası = grup çapası × grup içi pay. Ağaç parametredir (`anchor.tree`). Eski düz çapa
+(sınıf yüzdeleri) ağaca çevrilir: grup = sınıfların toplamı, pay = oranları; çok sınıflı grupta
+değeri olmayan sınıf izlenir.
+
 1. Riskli sınıfların son 3 yıllık **haftalık** getirilerinden yıllık kovaryans `Σ`.
    Ledoit-Wolf küçültmesi parametredir, ilk sürümde kapalı.
 2. **İki katmanlı eşit risk:** önce grup içinde, sonra gruplar arasında her biri eşit risk katkısı:
-   `RK_i = w_i · (Σ w)_i / √(wᵀ Σ w)`. Varsayılan gruplar: Kıymetli maden (Altın, Gümüş),
+   `RK_i = w_i · (Σ w)_i / √(wᵀ Σ w)`. Gruplar çapa ağacından gelir: Kıymetli maden (Altın, Gümüş),
    Hisse (Yurtiçi hisse, Yabancı hisse), Döviz sabit ayrı grup. Grupta olmayan sınıf tek başına grup olur.
-   Gruplar parametredir.
 3. **Gruplama önerisi:** korelasyondan uzaklık `√((1 − ρ) / 2)` ile ortalama bağlantılı kümeleme.
    Ekranda düz, kullanıcının gruplaması ve önerilen gruplamaya göre çapa yan yana gösterilir.
 4. **Hedef oynaklık:** `k = min(1, σ_hedef / σ_riskli)`; riskli ağırlıklar × k; TL sabit = 1 − k.
@@ -86,11 +92,13 @@ Uygulama çapayı önerir; kullanıcı kendi çapasını Ayarlar'da girer. Bantl
   ABD: Altın, Gümüş, Yabancı hisse). **Reel faiz kuralı önce gelir:** reel politika faizi pozitifse
   TL sabit +1, Döviz sabit −1; negatifse TL sabit −1, Döviz sabit +1.
 - **K:** kullanıcının sınıf başına −1, 0, +1 seçimi.
-- **Eğim (sürekli):** `eğim = 5 · max(−1, min(1, S / 0,5))` puan. Görüş etiketi: S ≥ 0,40 Olumlu,
-  S ≤ −0,25 Olumsuz, arası Nötr.
-- **Hedef:** `çapa + eğim`; negatif hedef 0'a çekilir, toplam 100'e ölçeklenir.
-- **İzlenen sınıf (kullanıcı onayı bekliyor):** çapada değeri olmayan sınıfın hedefi ve bandı yoktur; öneri mevcut
-  payını korur. Yönetilen sınıfların hedefleri `100 − izlenen sınıfların mevcut payı`na ölçeklenir. Uygulamanın çapa
+- **Grup görüşü:** `S_g = Σ_c pay_c · S_c / 100` (pay: çapadaki grup içi pay).
+- **Eğim (sürekli, yalnız grupta):** `eğim_g = 5 · max(−1, min(1, S_g / 0,5))` puan. Görüş etiketi:
+  S ≥ 0,40 Olumlu, S ≤ −0,25 Olumsuz, arası Nötr. Grup içi pay görüşle değişmez.
+- **Hedef:** grup hedefi `çapa_g + eğim_g`; negatif hedef 0'a çekilir, toplam 100'e ölçeklenir.
+  Sınıf hedefi = grup hedefi × grup içi pay.
+- **İzlenen sınıf:** çapada değeri olmayan sınıfın hedefi ve bandı yoktur; öneri mevcut
+  payını korur. Yönetilen grupların hedefleri `100 − izlenen sınıfların mevcut payı`na ölçeklenir. Uygulamanın çapa
   önerisi yalnız yeterli verisi olan sınıfları içerdiği için gerekli; aksi hâlde verisi olmayan sınıfın hedefi 0 olurdu.
 - **Görüş öneri üretmez (karar: A).** Görüş yalnız hedefi kaydırır; öneriyi bant aşımı tetikler.
 
@@ -138,9 +146,12 @@ puanlanmaz, en çok %5 ağırlık alır.
 
 ## 8. Katman 4 — karar
 
-- **Göreli bant:** genişlik = hedefin %25'i, en az 3, en çok 10 puan; alt sınır 0'ın altına inmez.
-- **Sayaç:** bant dışındaki sınıfın sayacı her iş günü +1; içeri dönünce 0.
-- **Öneri:** bir sayaç 20 iş gününe ulaşınca. Bant içindeki sınıfların fonları sabit kalır;
+- **Grup bandı (göreli):** grup maruziyeti (yönetilen sınıflarının toplamı) için genişlik = grup
+  hedefinin %25'i, en az 3, en çok 10 puan; alt sınır 0'ın altına inmez.
+- **Grup içi pay bandı:** sınıfın grup içindeki payı `maruziyet_c / maruziyet_g × 100`; bant = hedef
+  pay ± 10 puan (0–100 arası). Grup portföyün %5'inden küçükse pay denetlenmez.
+- **Sayaç:** her grup ve her grup içi pay için ayrı; bant dışında her iş günü +1, içeri dönünce 0.
+- **Öneri:** bir sayaç 20 iş gününe ulaşınca. Grubu ve grup içi payı bant içindeki sınıfların fonları sabit kalır;
   mevcut fon, aynı kategorideki adayla ancak puan farkı ≥ 20 ise değiştirilir.
 - **Durumlar:** aktif → kullanıcı "uygulandı" (yeni dağılımı girer, sayaçlar sıfırlanır) veya
   "reddedildi" (sayaçlar sıfırlanır, aynı öneri 20 iş günü tekrarlanmaz).
@@ -183,4 +194,10 @@ Ek A'daki 8 fonla, yılbaşı = 9 ay:
   fazla getiri.
 - Hak sayacı, Google Sheet, TL tutar ve XIRR ilk sürümden çıkarıldı. Ledoit-Wolf kapalı (Ö2).
 - Çapada olmayan sınıf izlenir (kullanıcı onayladı, 8 Ekim 2026).
+
+### 2.1 → 2.2 (8 Ekim 2026, kullanıcı onayı)
+
+- Çapa iki katmanlı ağaç: gruplar ve grup içi pay; döviz ayrı grup.
+- Görüş yalnız grup hedefini kaydırır; grup içi pay çapadaki gibi kalır.
+- Grup içi pay bandı ±10 puan; grup %5'ten küçükse denetlenmez. Öneri grup ya da pay sayacıyla.
 - Helal filtresi TEFAS fon türüyle birlikte; kategori önce TEFAS türünden; ücret ve azami gider TEFAS'tan.
