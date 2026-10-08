@@ -1,0 +1,96 @@
+{
+ "fonYonetimBazliBilgiGetir": [
+  {
+   "fonKodu": "AVJ",
+   "fonUnvan": "AGESA EMEKLİLİK VE HAYAT A.Ş. BAŞLANGIÇ KATILIM EMEKLİLİK YATIRIM FONU",
+   "fonTurAciklama": "Başlangıç Katılım Fonu",
+   "tefasDurum": false,
+   "fonTurKod": 158,
+   "kurucuKod": "AHS",
+   "altbaslik1": "uygulananFonIsletimGideriOraniYillik",
+   "uygulananYu1Y": "0,85",
+   "altbaslik2": "fonIcTuzugundeYerAlanFonIsletimGideriOraniYillik",
+   "fonIcTuzukYu1G": "0,85",
+   "yillikGetiri": 45.9,
+   "altbaslik3": "fonToplamGiderKesintisiOrani",
+   "fonTopGiderKesoran": "1,09"
+  },
+  {
+   "fonKodu": "EAE",
+   "fonUnvan": "AGESA HAYAT VE EMEKLİLİK A.Ş. ALTIN EMEKLİLİK YATIRIM FONU",
+   "fonTurAciklama": "Altın Fonu",
+   "tefasDurum": true,
+   "fonTurKod": 26,
+   "kurucuKod": "AHS",
+   "altbaslik1": "uygulananFonIsletimGideriOraniYillik",
+   "uygulananYu1Y": "1",
+   "altbaslik2": "fonIcTuzugundeYerAlanFonIsletimGideriOraniYillik",
+   "fonIcTuzukYu1G": "1",
+   "yillikGetiri": 18.67,
+   "altbaslik3": "fonToplamGiderKesintisiOrani",
+   "fonTopGiderKesoran": "1,09"
+  },
+  {
+   "fonKodu": "GEV",
+   "fonUnvan": "AGESA HAYAT VE EMEKLİLİK A.Ş. ALTIN KATILIM EMEKLİLİK YATIRIM FONU",
+   "fonTurAciklama": "Altın Katılım Fonu",
+   "tefasDurum": true,
+   "fonTurKod": 167,
+   "kurucuKod": "AHS",
+   "altbaslik1": "uygulananFonIsletimGideriOraniYillik",
+   "uygulananYu1Y": "1,05",
+   "altbaslik2": "fonIcTuzugundeYerAlanFonIsletimGideriOraniYillik",
+   "fonIcTuzukYu1G": "1,05",
+   "yillikGetiri": 17.47,
+   "altbaslik3": "fonToplamGiderKesintisiOrani",
+   "fonTopGiderKesoran": "1,09"
+  }
+ ],
+ "fonGetiriBazliBilgiGetir": [
+  {
+   "fonKodu": "AVJ",
+   "fonUnvan": "AGESA EMEKLİLİK VE HAYAT A.Ş. BAŞLANGIÇ KATILIM EMEKLİLİK YATIRIM FONU",
+   "fonTurAciklama": "Başlangıç Katılım Fonu",
+   "tefasDurum": false,
+   "getiri1a": 3.0066,
+   "getiri3a": 10.0191,
+   "getiri6a": 21.5144,
+   "getiri1y": 45.8955,
+   "getiriyb": 33.4723,
+   "getiri3y": 246.4075,
+   "getiri5y": 446.6449,
+   "getiriOrani": null,
+   "riskDegeri": "1"
+  },
+  {
+   "fonKodu": "EAE",
+   "fonUnvan": "AGESA HAYAT VE EMEKLİLİK A.Ş. ALTIN EMEKLİLİK YATIRIM FONU",
+   "fonTurAciklama": "Altın Fonu",
+   "tefasDurum": true,
+   "getiri1a": -4.3633,
+   "getiri3a": 4.6803,
+   "getiri6a": -3.448,
+   "getiri1y": 18.6702,
+   "getiriyb": 8.1338,
+   "getiri3y": null,
+   "getiri5y": null,
+   "getiriOrani": null,
+   "riskDegeri": "6"
+  },
+  {
+   "fonKodu": "GEV",
+   "fonUnvan": "AGESA HAYAT VE EMEKLİLİK A.Ş. ALTIN KATILIM EMEKLİLİK YATIRIM FONU",
+   "fonTurAciklama": "Altın Katılım Fonu",
+   "tefasDurum": true,
+   "getiri1a": -4.4553,
+   "getiri3a": 4.3964,
+   "getiri6a": -3.927,
+   "getiri1y": 17.4664,
+   "getiriyb": 5.2334,
+   "getiri3y": 330.907,
+   "getiri5y": null,
+   "getiriOrani": null,
+   "riskDegeri": "6"
+  }
+ ]
+}
