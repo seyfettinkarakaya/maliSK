@@ -70,3 +70,22 @@ export function buildPrompt({ latest, state, drift, targets, bands, due, proposa
   L.push('Sorularım: Dağılımım hedeften neden ve ne kadar sapıyor? Modelin önerisi mantıklı mı, gözden kaçan bir risk var mı? Çapamı değiştirmem gerekir mi?');
   return L.join('\n');
 }
+
+// Tek fon için soru metni (fon ayrıntısındaki "Bu fonu Claude'a sor").
+export function buildFundPrompt({ latest, fund: f, weight = null }) {
+  const L = [];
+  const n = fundNames(f.name);
+  L.push(`maliSK verileriyle bir helal (katılım) BES fonunu değerlendirmeni istiyorum: ${f.code} ${n.short} (${n.company}).`);
+  L.push(`Fon verisi tarihi: ${latest.data_date} · model ${latest.model_version} · parametre sürümü ${latest.param_version}.`);
+  L.push('Yatırım tavsiyesi değil karar desteği istiyorum; gerekçeni ve emin olmadığın noktaları açıkça yaz.');
+  L.push('');
+  L.push(`- TEFAS türü: ${f.tefas_type || '—'} · kategori: ${latest.category_labels[f.category] || f.category} · helal dayanağı: ${f.halal_basis || '—'}`);
+  L.push(`- Puan: ${f.score === null ? 'yok' : `${num(f.score, 0)} (${f.rank}/${f.peers})`} · ücret %${num(f.fee, 2)} · SPK risk ${f.risk ?? '—'}/7 · büyüklük ${num((f.size_tl || 0) / 1e6, 0)} milyon TL`);
+  L.push('- İçerik: ' + Object.entries(f.exposure).filter(([, v]) => v > 0.05).map(([c, v]) => `${CLASS_LABELS[c]} %${num(v, 1)}`).join(', '));
+  L.push('- Getiri: ' + ['1m', '3m', '6m', 'ytd', '1y', '3y', '5y'].filter((p) => f.returns?.[p] !== null && f.returns?.[p] !== undefined).map((p) => `${p} ${pct(f.returns[p], 1)} (fazla ${signed(f.excess?.[p], 1)})`).join(', '));
+  if (f.flags.length) L.push('- Bayraklar: ' + f.flags.join(', '));
+  if (weight !== null) L.push(`- Dağılımımdaki payı: %${num(weight, 1)}`);
+  L.push('');
+  L.push('Sorum: Bu fonu dağılımımda tutmalı mıyım, aynı kategoride daha iyi bir seçenek var mı?');
+  return L.join('\n');
+}

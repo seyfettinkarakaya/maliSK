@@ -140,7 +140,8 @@ puanlanmaz, en çok %5 ağırlık alır.
 `min_w Σ_s (Σ_f w_f · i_(f,s) − h_s)² + λ · Σ_f w_f · u_f`, `λ = 0,002`
 
 - Kısıtlar: `w_f ≥ 0`, `Σ w_f = 1`, yeni fon ≤ %5, en çok 20 fon.
-- Aday: her kategoriden en yüksek puanlı fon + mevcut fonlar.
+- Aday: her kategoriden en yüksek puanlı fon + mevcut fonlar. Devlet katkısı ve merkezi alacak devri
+  fonları kullanıcı seçemediği için aday olmaz (`allocation.excluded_categories`).
 - Tam sayı yüzdeye en büyük kalan yöntemiyle yuvarlanır.
 - Hedefinden 3 puandan fazla uzak kalan sınıf için "Uygun araç yok".
 

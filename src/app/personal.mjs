@@ -111,7 +111,8 @@ export function bandHistory(latest, drift, targets, params) {
     for (let i = days.length - 1; i >= 0 && out(days[i].check); i--) n++;
     counters[key] = n;
   }
-  return { exposure: today.exposure, ...today.check, counters, days_observed: days.length };
+  const history = days.map((d) => ({ date: d.date, group_exposure: d.check.group_exposure }));
+  return { exposure: today.exposure, ...today.check, counters, history, days_observed: days.length };
 }
 
 function businessDaysBetween(a, b) {
@@ -137,7 +138,7 @@ export function buildProposal(latest, current, bands, targets, params) {
   const gap = params.decision.switch_score_gap;
   const best = {};
   for (const f of latest.funds) {
-    if (!f.halal || f.score === null || f.category === 'unclassified') continue;
+    if (!f.halal || f.score === null || f.category === 'unclassified' || params.allocation.excluded_categories.includes(f.category)) continue;
     if (!best[f.category] || f.score > best[f.category].score) best[f.category] = f;
   }
   const bounds = {};

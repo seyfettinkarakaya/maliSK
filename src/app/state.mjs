@@ -4,18 +4,20 @@ const KEY = 'malisk.v1';
 export const EMPTY_STATE = {
   allocation: null, // { date: 'YYYY-MM-DD', weights: { kod: yüzde } } — mevcut birikimin dağılımı
   allocation_history: [],
-  anchor: null, // { sınıf: yüzde } — kullanıcının çapası
+  anchor: null, // { groups: { grup: yüzde }, splits: { grup: { sınıf: yüzde } } } — çapa ağacı (eski düz biçim de okunur)
   anchor_date: null,
   views: {}, // { sınıf: −1 | 0 | 1 } — K
   decisions: [], // { date, action: 'uygulandi' | 'reddedildi', weights? }
+  prefs: { size: 'l', theme: 'auto' }, // yazı boyu m | l | xl | sys; tema auto | light | dark
 };
 
 export function loadState() {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? { ...EMPTY_STATE, ...JSON.parse(raw) } : { ...EMPTY_STATE };
+    const st = raw ? { ...EMPTY_STATE, ...JSON.parse(raw) } : { ...EMPTY_STATE };
+    return { ...st, prefs: { ...EMPTY_STATE.prefs, ...(st.prefs || {}) } };
   } catch {
-    return { ...EMPTY_STATE };
+    return { ...EMPTY_STATE, prefs: { ...EMPTY_STATE.prefs } };
   }
 }
 
@@ -35,5 +37,5 @@ export function exportState(state) {
 export function importState(text) {
   const doc = JSON.parse(text);
   if (doc.app !== 'maliSK' || !doc.state) throw new Error('Bu metin bir maliSK yedeği değil.');
-  return { ...EMPTY_STATE, ...doc.state };
+  return { ...EMPTY_STATE, ...doc.state, prefs: { ...EMPTY_STATE.prefs, ...(doc.state.prefs || {}) } };
 }

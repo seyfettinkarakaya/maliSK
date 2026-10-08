@@ -182,6 +182,8 @@ export const DEFAULT_PARAMS = {
     drift_pts: 15,
   },
   allocation: {
+    // Kullanıcının seçemediği fonlar öneriye aday olmaz (devlet katkısı ve merkezi alacak devri fonları).
+    excluded_categories: ['state_contribution', 'receivables'],
     candidates_per_category: 1,
     fee_lambda: 0.002,
     no_instrument_pts: 3,
