@@ -74,8 +74,9 @@ değeri olmayan sınıf izlenir.
 3. **Gruplama önerisi:** korelasyondan uzaklık `√((1 − ρ) / 2)` ile ortalama bağlantılı kümeleme.
    Ekranda düz, kullanıcının gruplaması ve önerilen gruplamaya göre çapa yan yana gösterilir.
 4. **Hedef oynaklık:** `k = min(1, σ_hedef / σ_riskli)`; riskli ağırlıklar × k; TL sabit = 1 − k.
-   Varsayılan %12. Ekranda geçmiş veride bu ayarın en büyük düşüşü, en kötü 12 aylık reel getirisi
-   ve TL sabit payı gösterilir.
+   Varsayılan %12. Ekranda geçmiş veride bu ayarın en büyük düşüşü, en kötü 12 aylık getirisi
+   ve TL sabit payı gösterilir (geri test: son 60 ayın ay sonu sınıf endeksleri, her ay çapaya dönülür,
+   verisi olmayan sınıfın ağırlığı diğerlerine dağılır; TÜFE verisi gelene kadar nominal).
 5. **Negatif reel faiz:** reel politika faizi (politika faizi − yıllık TÜFE) negatifse uyarı çıkar ve
    önerideki TL sabit payı 0,5 ile çarpılır; boşalan pay riskli sınıflara orantılı dağıtılır.
    TL sabitin son 12 aylık reel getirisi her zaman gösterilir.

@@ -7,6 +7,7 @@ import { periodConsistency, scoreCategory, median, hygiene } from '../model/scor
 import { trendScore } from '../model/tactical.mjs';
 import { checkAlert } from '../model/bands.mjs';
 import { covariance, anchorSuggestion, suggestGroups, correlation } from '../model/riskparity.mjs';
+import { backtest } from '../model/backtest.mjs';
 import {
   periodReturns, periodReturn, dailyReturns, medianSeries, onOrBefore, stdev, maxDrawdown, sortino,
   sampleEvery, monthlyReturns, shiftDays, shiftMonths,
@@ -118,6 +119,16 @@ export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }
     classes[cls] = entry;
   }
 
+  // 3b. Aylık sınıf endeksleri (geri test için, son 61 ay sonu; telefon da kullanır).
+  const monthEnds = calendar.filter((d, i) => i === calendar.length - 1 || calendar[i + 1].slice(0, 7) !== d.slice(0, 7)).slice(-61);
+  const classMonthly = {
+    dates: monthEnds,
+    series: Object.fromEntries(Object.entries(classSeries).filter(([, s]) => s).map(([c, s]) => [c, monthEnds.map((d) => {
+      const i = onOrBefore(s.dates, d);
+      return i >= 0 && s.dates[0] <= d ? round(s.index[i], 6) : null;
+    })])),
+  };
+
   // 4. Çapa önerisi: haftalık getiri, en çok 3 yıl.
   const anchor = (() => {
     const ids = RISKY.filter((c) => classSeries[c]);
@@ -137,12 +148,14 @@ export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }
     const cov = covariance(rows, params.anchor.periods_per_year);
     const pack = (a) => ({ weights: roundObj(a.weights, 2), risky_vol_pct: round(a.risky_vol_pct, 2), k: round(a.k, 3), groups: a.groups, warnings: a.warnings });
     const suggested = suggestGroups(cov, ids, 2);
+    const ug = anchorSuggestion(cov, ids, params.anchor);
+    const bt = backtest(ug.weights, classMonthly);
     return {
       ok: true,
       as_of: dataDate,
       weeks: rows.length,
       ids,
-      user_groups: pack(anchorSuggestion(cov, ids, params.anchor)),
+      user_groups: { ...pack(ug), backtest: bt.ok ? roundObj(Object.fromEntries(Object.entries(bt).filter(([, v]) => typeof v === 'number')), 2) : null },
       flat: pack(anchorSuggestion(cov, ids, { ...params.anchor, groups: [] })),
       suggested: pack(anchorSuggestion(cov, ids, { ...params.anchor, groups: suggested })),
       correlation: correlation(cov).map((r) => r.map((v) => round(v, 3))),
@@ -326,6 +339,7 @@ export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }
         };
       }),
     prices_tail: { dates: tailDates, prices: tailPrices },
+    class_monthly: classMonthly,
   };
 }
 
