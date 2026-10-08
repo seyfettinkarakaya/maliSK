@@ -146,6 +146,7 @@ export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }
       flat: pack(anchorSuggestion(cov, ids, { ...params.anchor, groups: [] })),
       suggested: pack(anchorSuggestion(cov, ids, { ...params.anchor, groups: suggested })),
       correlation: correlation(cov).map((r) => r.map((v) => round(v, 3))),
+      cov: cov.map((r) => r.map((v) => round(v, 8))),
       vol_annual_pct: ids.map((_, i) => round(Math.sqrt(cov[i][i]) * 100, 2)),
     };
   })();

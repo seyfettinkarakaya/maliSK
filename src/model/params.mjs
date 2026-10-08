@@ -203,3 +203,30 @@ export const DEFAULT_PARAMS = {
     split_min_group_pct: 5,
   },
 };
+
+// Telefondan değiştirilebilen parametreler (Ayarlar → Model ayarları). Hepsi telefonda yeniden hesaplanır:
+// hedef, bant, öneri, acil uyarı, çapa önerisi (kovaryans hattan gelir) ve fon puanı (bileşenler hattan gelir).
+export const PARAM_META = [
+  { key: 'decision.band_rel_pct', group: 'Aralık', label: 'Grup aralığı (hedefin yüzdesi)', unit: '%', min: 5, max: 60, step: 5 },
+  { key: 'decision.band_min_pts', group: 'Aralık', label: 'Aralık en az', unit: 'puan', min: 1, max: 10, step: 0.5 },
+  { key: 'decision.band_max_pts', group: 'Aralık', label: 'Aralık en çok', unit: 'puan', min: 3, max: 20, step: 0.5 },
+  { key: 'decision.split_band_pts', group: 'Aralık', label: 'Grup içi pay aralığı', unit: 'puan', min: 2, max: 30, step: 1 },
+  { key: 'decision.split_min_group_pct', group: 'Aralık', label: 'Grup içi pay denetimi için en küçük grup', unit: '%', min: 0, max: 20, step: 1 },
+  { key: 'decision.confirm_days', group: 'Öneri', label: 'Teyit süresi', unit: 'iş günü', min: 1, max: 60, step: 1 },
+  { key: 'decision.switch_score_gap', group: 'Öneri', label: 'Fon değiştirmek için puan farkı', unit: 'puan', min: 0, max: 50, step: 1 },
+  { key: 'fund_quality.new_fund_cap_pct', group: 'Öneri', label: 'Yeni fon tavanı', unit: '%', min: 0, max: 20, step: 1 },
+  { key: 'allocation.no_instrument_pts', group: 'Öneri', label: '“Uygun araç yok” eşiği', unit: 'puan', min: 1, max: 10, step: 0.5 },
+  { key: 'tactical.max_tilt_pts', group: 'Görüş', label: 'Görüşün en büyük etkisi', unit: 'puan', min: 0, max: 15, step: 0.5 },
+  { key: 'tactical.full_tilt_at', group: 'Görüş', label: 'Tam etki için S', unit: '', min: 0.1, max: 1, step: 0.05 },
+  { key: 'tactical.weights.trend', group: 'Görüş', label: 'Trend ağırlığı (T)', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'tactical.weights.macro', group: 'Görüş', label: 'Makro ağırlığı (M)', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'tactical.weights.user', group: 'Görüş', label: 'Senin görüşünün ağırlığı (K)', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'decision.alert_sigma_mult', group: 'Acil uyarı', label: 'Uyarı eşiği (normal oynaklığın katı)', unit: '×', min: 1, max: 5, step: 0.25 },
+  { key: 'anchor.target_vol_pct', group: 'Çapa önerisi', label: 'Hedef oynaklık', unit: '%', min: 4, max: 30, step: 1 },
+  { key: 'anchor.class_cap_pct', group: 'Çapa önerisi', label: 'Sınıf tavanı', unit: '%', min: 15, max: 100, step: 5 },
+  { key: 'fund_quality.weights.consistency', group: 'Fon puanı', label: 'İstikrar ağırlığı', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'fund_quality.weights.excess_index', group: 'Fon puanı', label: 'Fazla getiri ağırlığı', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'fund_quality.weights.risk', group: 'Fon puanı', label: 'Risk ağırlığı', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'fund_quality.weights.cost', group: 'Fon puanı', label: 'Ücret ağırlığı', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'fund_quality.weights.hygiene', group: 'Fon puanı', label: 'Düzen ağırlığı', unit: '', min: 0, max: 1, step: 0.05 },
+];

@@ -4,9 +4,36 @@ import { CLASSES } from '../model/params.mjs';
 import { portfolioExposure } from '../model/exposure.mjs';
 import { compositeScore, tilt, viewLabel } from '../model/tactical.mjs';
 import { normalizeAnchor, classAnchor, treeTargets, treeBandCheck, groupOf, targetDistance } from '../model/tree.mjs';
+import { checkAlert } from '../model/bands.mjs';
+import { weightedScore } from '../model/scoring.mjs';
+import { anchorSuggestion } from '../model/riskparity.mjs';
 import { optimizeAllocation, roundLargestRemainder, noInstrumentGaps } from '../model/optimize.mjs';
 
 export const ANCHOR_CLASSES = ['gold', 'silver', 'tl_fixed', 'equity_tr', 'equity_foreign', 'fx_fixed'];
+
+// Kullanıcı parametreleri telefonda: acil uyarı, fon puanı ve çapa önerisi hattan gelen girdilerle
+// (sınıf endeksi, puan bileşenleri, kovaryans) yeniden hesaplanır. Varsayılan parametrelerle sonuç hatla aynıdır.
+export function applyParams(latest, P) {
+  const classes = Object.fromEntries(Object.entries(latest.classes).map(([c, e]) => {
+    if (!e.index_tail || !e.vol_annual_pct) return [c, e];
+    const a = checkAlert(e.index_tail, e.vol_annual_pct, P.decision);
+    return [c, { ...e, alert: a && { change_pct: a.change, threshold_pct: a.threshold, sigma_multiple: a.sigma_multiple, triggered: a.triggered } }];
+  }));
+  const funds = latest.funds.map((f) => {
+    if (!f.components || f.score === null) return f;
+    const raw = weightedScore(f.components, P.fund_quality.weights);
+    return { ...f, raw_score: raw, score: raw === null ? null : 50 + (f.confidence ?? 1) * (raw - 50) };
+  });
+  const byCat = {};
+  for (const f of funds) if (f.halal && f.score !== null) (byCat[f.category] ||= []).push(f);
+  for (const list of Object.values(byCat)) list.sort((a, b) => b.score - a.score).forEach((f, i) => { f.rank = i + 1; f.peers = list.length; });
+  let anchor = latest.anchor;
+  if (anchor?.ok && anchor.cov) {
+    const a = anchorSuggestion(anchor.cov, anchor.ids, P.anchor);
+    anchor = { ...anchor, user_groups: { ...anchor.user_groups, weights: a.weights, risky_vol_pct: a.risky_vol_pct, k: a.k, warnings: a.warnings } };
+  }
+  return { ...latest, classes, funds, anchor };
+}
 
 export function fundIndex(latest) {
   return Object.fromEntries(latest.funds.map((f) => [f.code, f]));
