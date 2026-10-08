@@ -181,5 +181,5 @@ Ek A'daki 8 fonla, yılbaşı = 9 ay:
 - Negatif reel faizde TL sabit uyarısı; döviz sabite aynalı reel faiz kuralı; içerik geçmişiyle
   fazla getiri.
 - Hak sayacı, Google Sheet, TL tutar ve XIRR ilk sürümden çıkarıldı. Ledoit-Wolf kapalı (Ö2).
-- Çapada olmayan sınıf izlenir (onay bekliyor).
+- Çapada olmayan sınıf izlenir (kullanıcı onayladı, 8 Ekim 2026).
 - Helal filtresi TEFAS fon türüyle birlikte; kategori önce TEFAS türünden; ücret ve azami gider TEFAS'tan.
