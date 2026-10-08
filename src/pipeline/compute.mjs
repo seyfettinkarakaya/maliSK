@@ -3,7 +3,7 @@
 import { CLASSES, CLASS_LABELS, CATEGORY_LABELS } from '../model/params.mjs';
 import { categoryFromName, fundExposure, mainClass, halalCheck } from '../model/exposure.mjs';
 import { periodIndex, longTermIndex, ytdMonths } from '../model/indices.mjs';
-import { periodConsistency, scoreCategory, median } from '../model/scoring.mjs';
+import { periodConsistency, scoreCategory, median, hygiene } from '../model/scoring.mjs';
 import { trendScore } from '../model/tactical.mjs';
 import { checkAlert } from '../model/bands.mjs';
 import { covariance, anchorSuggestion, suggestGroups, correlation } from '../model/riskparity.mjs';
@@ -29,7 +29,7 @@ function contentAt(snapshots, code, date) {
   return found;
 }
 
-export function computeLatest({ fundsMeta, prices, contents, params, generatedAt }) {
+export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }, prices, contents, params, generatedAt }) {
   const U = params.universe;
   const calendar = [...new Set(Object.values(prices).flatMap((l) => l.map((r) => r.date)))].sort();
   const dataDate = calendar[calendar.length - 1];
@@ -39,17 +39,21 @@ export function computeLatest({ fundsMeta, prices, contents, params, generatedAt
   const funds = {};
   for (const [code, list] of Object.entries(prices)) {
     const meta = fundsMeta[code] || {};
+    const tm = typeMeta.funds?.[code] || {};
     const name = meta.name || code;
-    const category = U.category_overrides[code] || categoryFromName(name, U.category_keywords);
+    // Kategori önce TEFAS fon türünden, eşleşmezse addaki anahtar kelimeden.
+    const category = U.category_overrides[code] || (tm.type && U.type_categories[tm.type]) || categoryFromName(name, U.category_keywords);
     const snap = contentAt(contents, code, dataDate);
     const content = snap ? snap.map[code] : {};
     const fe = fundExposure({ category, content }, U);
-    const halal = snap ? halalCheck({ code, name }, fe.interest, U) : { halal: false, reason: 'içerik verisi yok' };
+    const halal = snap ? halalCheck({ code, name, type: tm.type }, fe.interest, U) : { halal: false, reason: 'içerik verisi yok', basis: null };
     const dates = list.map((r) => r.date);
     const values = list.map((r) => r.price);
     funds[code] = {
       code, name, category, content_date: snap?.date ?? null, exposure: fe.exposure, unknown_fields: fe.unknown_fields,
-      main_class: mainClass(fe.exposure), halal: halal.halal, halal_reason: halal.reason,
+      main_class: mainClass(fe.exposure), halal: halal.halal, halal_reason: halal.reason, halal_basis: halal.basis,
+      tefas_type: tm.type ?? null, type_code: tm.type_code ?? null, founder: tm.founder ?? null,
+      fee: tm.fee ?? null, fee_prospectus: tm.fee_prospectus ?? null, max_ter: tm.max_ter ?? null, risk: tm.risk ?? null,
       dates, values, rets: dailyReturns(dates, values), last: list[list.length - 1],
     };
   }
@@ -215,7 +219,7 @@ export function computeLatest({ fundsMeta, prices, contents, params, generatedAt
       return {
         code: f.code, history_months: m.history_months, consistency,
         excess_index: m.indices.excess, tracking_error: m.tracking_error, mdd: m.mdd, sortino: m.sortino,
-        fee: null, hygiene: size < fq.small_fund_tl ? 0.5 : 1,
+        fee: f.fee, hygiene: hygiene(f.fee, f.max_ter, size, fq.small_fund_tl),
       };
     });
     for (const r of scoreCategory(rows, { passive: U.passive_categories.includes(cat), params })) scores[r.code] = r;
@@ -257,7 +261,7 @@ export function computeLatest({ fundsMeta, prices, contents, params, generatedAt
     data_date: dataDate,
     content_date: latestContent.date,
     sources: {
-      tefas: { funds: Object.keys(funds).length, halal: helal.length, first_date: calendar[0], last_date: dataDate },
+      tefas: { funds: Object.keys(funds).length, halal: helal.length, first_date: calendar[0], last_date: dataDate, meta_as_of: typeMeta.as_of },
       evds: { status: 'anahtar yok' },
       fred: { status: 'anahtar yok' },
     },
@@ -276,6 +280,14 @@ export function computeLatest({ fundsMeta, prices, contents, params, generatedAt
           category: f.category,
           halal: f.halal,
           halal_reason: f.halal_reason,
+          halal_basis: f.halal_basis,
+          tefas_type: f.tefas_type,
+          type_code: f.type_code,
+          founder: f.founder,
+          fee: f.fee,
+          fee_prospectus: f.fee_prospectus,
+          max_ter: f.max_ter,
+          risk: f.risk,
           main_class: f.main_class,
           exposure: roundObj(f.exposure, 2),
           content_date: f.content_date,

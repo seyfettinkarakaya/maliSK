@@ -7,7 +7,7 @@ import { buildPrompt } from './claude.mjs';
 import { num, pct, signed, esc, dateTr, moneyTl, people, fundNames, FLAG_LABELS, todayIstanbul } from './format.mjs';
 
 const CLASS_VAR = { gold: '--c-altin', silver: '--c-gumus', tl_fixed: '--c-tl', equity_tr: '--c-yi', equity_foreign: '--c-yd', fx_fixed: '--c-doviz', unclassified: '--c-bel' };
-const CATEGORY_ORDER = ['gold', 'precious_metals', 'silver', 'equity', 'mixed', 'money_market', 'lease_tl', 'fx', 'unclassified'];
+const CATEGORY_ORDER = ['gold', 'precious_metals', 'silver', 'equity', 'mixed', 'money_market', 'lease_tl', 'fx', 'standard', 'starter', 'state_contribution', 'receivables', 'unclassified'];
 const VIEW = { positive: ['Olumlu', 'ok'], neutral: ['Nötr', 'n'], negative: ['Olumsuz', 'bad'] };
 const PERIOD_LABELS = { '1m': '1 ay', '3m': '3 ay', '6m': '6 ay', ytd: 'Yılbaşı', '1y': '1 yıl', '3y': '3 yıl', '5y': '5 yıl' };
 const ANCHOR_VARIANTS = { user_groups: 'Gruplu', flat: 'Düz', suggested: 'Veriden' };
@@ -124,7 +124,7 @@ function explain(key, m) {
       html: '<div class="formula">Puan = 100 × Σ ağırlık × bileşen / Σ ağırlık (yalnız hesaplanabilen bileşenler)<br>Bileşen = 0,5 + (değer − kategori medyanı) / (2 × ölçek)</div>'
         + sheetTable([...rows, ['Kullanılan ağırlık toplamı', num(den, 2)], ['Ham puan', num(f.raw_score, 1)],
           ['Güven (geçmiş / 36 ay)', `${num(f.history_months, 0)} ay → ${num((f.confidence ?? 1) * 100, 0)}%`]], ['Puan = 50 + güven × (ham − 50)', num(f.score, 1)])
-        + '<p class="ex">Maliyet bileşeni ücret verisi girilince hesaplanır. 50 puan kategori ortasıdır.</p>',
+        + `<p class="ex">Fon işletim gideri ${pct(f.fee, 2)} (TEFAS). 50 puan kategori ortasıdır.</p>`,
     };
   }
   if (kind === 'alert') {
@@ -281,7 +281,7 @@ function fundCard(f) {
   const flags = f.flags.filter((x) => x !== 'yeni_fon').map((x) => `<span class="pill warn">${FLAG_LABELS[x]}</span>`).join(' ');
   return `<button class="fund" data-act="fund" data-code="${esc(f.code)}"><div class="hd"><div><b>${esc(f.code)}</b><small>${esc(n.short)} · ${esc(n.company)}</small></div><div class="score">${score}</div></div>
     ${f.components ? `<div class="comps">${bars}</div>` : ''}
-    <div class="meta"><span>1 yıl ${pct(f.returns?.['1y'], 1)}</span><span>${moneyTl(f.size_tl)}</span><span>${people(f.investors)}</span>${flags}</div></button>`;
+    <div class="meta"><span>1 yıl ${pct(f.returns?.['1y'], 1)}</span><span>ücret ${pct(f.fee, 2)}</span><span>${moneyTl(f.size_tl)}</span><span>${people(f.investors)}</span>${flags}</div></button>`;
 }
 
 function viewFonlar() {
@@ -329,7 +329,11 @@ function viewFund(code) {
       <div class="leg2">${stack.map((c) => `<span ${cls(c)}>${CLASS_LABELS[c]} %${num(f.exposure[c], 1)}</span>`).join('')}</div>
       ${f.unknown_fields ? `<p class="sub">Eşlenmemiş içerik alanı: ${f.unknown_fields.map(esc).join(', ')}</p>` : ''}</div></section>
     <section class="sec"><h2>Bilgi</h2><div class="card"><div class="rows">
+      <div class="row"><span class="l">TEFAS fon türü</span><span class="r">${esc(f.tefas_type || '—')}${f.type_code ? `<small>kod ${f.type_code}</small>` : ''}</span></div>
+      <div class="row"><span class="l">Helal dayanağı</span><span class="r">${esc(f.halal_basis || '—')}<small>${f.halal ? 'faizli araç yok' : esc(f.halal_reason || '')}</small></span></div>
       <div class="row"><span class="l">Kategori</span><span class="r">${esc(CATEGORY_LABELS[f.category] || f.category)}</span></div>
+      <div class="row"><span class="l">Fon işletim gideri (yıllık)</span><span class="r">${pct(f.fee, 2)}<small>iç tüzük ${pct(f.fee_prospectus, 2)} · azami toplam ${pct(f.max_ter, 2)}</small></span></div>
+      <div class="row"><span class="l">SPK risk değeri</span><span class="r">${f.risk ?? '—'} / 7</span></div>
       <div class="row"><span class="l">Ana sınıf</span><span class="r">${CLASS_LABELS[f.main_class]}</span></div>
       <div class="row"><span class="l">Fiyat</span><span class="r">${num(f.price, 6)}<small>${dateTr(f.price_date)}</small></span></div>
       <div class="row"><span class="l">Büyüklük</span><span class="r">${moneyTl(f.size_tl)}</span></div>

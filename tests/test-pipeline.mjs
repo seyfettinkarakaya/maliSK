@@ -130,3 +130,34 @@ test('computeLatest: sentetik piyasa uçtan uca', () => {
   assert.ok(Number.isFinite(byCode.HS1.indices.ind5_compound));
   assert.ok(Number.isFinite(byCode.HS1.indices.excess));
 });
+
+test('TEFAS fon türü ve ücret: normalleştirme, kategori, helal dayanağı, maliyet', async () => {
+  const { normalizeMeta, trDecimal } = await import('../src/data/tefas.mjs');
+  assert.equal(trDecimal('0,85'), 0.85);
+  assert.equal(trDecimal('1'), 1);
+  assert.equal(trDecimal(''), null);
+  const meta = normalizeMeta(
+    [{ fonKodu: 'GA1', fonUnvan: 'A', fonTurAciklama: 'Altın Katılım Fonu', fonTurKod: 167, kurucuKod: 'X', uygulananYu1Y: '0,90', fonIcTuzukYu1G: '0,90', fonTopGiderKesoran: '1,09', tefasDurum: false }],
+    [{ fonKodu: 'GA1', riskDegeri: '6' }],
+  );
+  assert.deepEqual(meta.GA1, { name: 'A', type: 'Altın Katılım Fonu', type_code: 167, founder: 'X', fee: 0.9, fee_prospectus: 0.9, max_ter: 1.09, tefas_status: false, risk: 6 });
+
+  const { prices, meta: names, contents } = syntheticMarket();
+  const typeMeta = {
+    as_of: '2026-01-01',
+    funds: {
+      GA1: { type: 'Altın Katılım Fonu', fee: 0.9, max_ter: 1.09 },
+      GA2: { type: 'Altın Katılım Fonu', fee: 1.2, max_ter: 1.09 },
+      PP1: { type: 'Para Piyasası Fonu', fee: 0.8, max_ter: 1.09 },
+      YN1: { type: 'Başlangıç Katılım Fonu', fee: 0.85, max_ter: 1.09 },
+    },
+  };
+  const out = computeLatest({ fundsMeta: names, typeMeta, prices, contents, params: P, generatedAt: 'x' });
+  const f = Object.fromEntries(out.funds.map((x) => [x.code, x]));
+  assert.equal(f.YN1.category, 'starter', 'kategori TEFAS türünden');
+  assert.equal(f.GA1.halal_basis, 'TEFAS türü: Altın Katılım Fonu');
+  assert.equal(f.PP1.halal_basis, 'adında KATILIM (TEFAS türü: Para Piyasası Fonu)');
+  assert.equal(f.GA2.components.hygiene, 0.5, 'ücret azami gideri aşıyor');
+  assert.ok(f.GA1.components.cost > f.GA2.components.cost, 'düşük ücret daha iyi');
+  assert.equal(out.sources.tefas.meta_as_of, '2026-01-01');
+});

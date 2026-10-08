@@ -85,11 +85,20 @@ async function daily() {
     log(`içerik ayın ilk günü: ${await fetchContent(monthStart, shiftDays(monthStart, 6), true)}`);
   }
   log(`içerik son: ${await fetchContent(shiftDays(today, -6), today, false)}`);
+  try {
+    const all = await client.fundMeta();
+    const keep = Object.fromEntries(Object.entries(all).filter(([, m]) => isKatilim(m.name) || /katılım/i.test(m.type || '')));
+    store.saveMeta(today, keep);
+    log(`fon türü ve ücret: ${Object.keys(keep).length} katılım fonu`);
+  } catch (err) {
+    log(`fon türü ve ücret alınamadı, önceki kayıt kullanılacak: ${err.message}`);
+  }
 }
 
 function compute() {
   const latest = computeLatest({
     fundsMeta: store.funds(),
+    typeMeta: store.meta(),
     prices: store.loadPrices(),
     contents: store.loadContents(),
     params: DEFAULT_PARAMS,

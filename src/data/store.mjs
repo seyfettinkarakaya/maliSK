@@ -1,5 +1,6 @@
 // Depodaki veri dosyaları. Geçmiş aylar hiç değişmez; içinde bulunulan ayın dosyasına yalnız gün eklenir.
 //   data/funds.json              { kod: { name, first_seen, last_seen } }
+//   data/fund_meta.json          { as_of, funds: { kod: { type, type_code, founder, fee, max_ter, risk, ... } } }
 //   data/prices/YYYY-MM.json     { fields, days: { 'YYYY-MM-DD': [[kod, fiyat, pay, kişi, büyüklük], ...] } }
 //   data/contents/YYYY-MM.json   { snapshots: { 'YYYY-MM-DD': { kod: { alan: yüzde } } } }  (ayın ilk ve son günü)
 import fs from 'node:fs';
@@ -31,6 +32,15 @@ export class Store {
 
   saveFunds(funds) {
     writeJson(path.join(this.dir, 'funds.json'), funds);
+  }
+
+  // TEFAS fon türü, kurucu, ücretler, risk değeri (son durum; geçmişi git'te).
+  meta() {
+    return readJson(path.join(this.dir, 'fund_meta.json'), { as_of: null, funds: {} });
+  }
+
+  saveMeta(asOf, funds) {
+    writeJson(path.join(this.dir, 'fund_meta.json'), { as_of: asOf, funds });
   }
 
   priceMonths() {

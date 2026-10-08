@@ -70,6 +70,20 @@ export class TefasClient {
       basTarih: ymd(start), bitTarih: ymd(end), basSira: 1, bitSira: 100000, dil: 'TR',
       sFonTurKod: '', fonKod: '', fonGrup: '', fonUnvanTip: '',
     };
+    return this.request(URLS[kind], body, `${kind} ${ymd(start)}-${ymd(end)}`);
+  }
+
+  // Fon türü (fonTurAciklama, fonTurKod), kurucu, ücretler ve SPK risk değeri — tek istekte tüm EMK fonları.
+  async fundMeta() {
+    const fees = await this.request(BASE + 'fonYonetimBazliBilgiGetir', { fonTipi: 'EMK', dil: 'TR' }, 'fon türü ve ücret');
+    const rets = await this.request(BASE + 'fonGetiriBazliBilgiGetir', {
+      fonTipi: 'EMK', dil: 'TR', calismaTipi: 2, donemGetiri1a: '1', donemGetiri3a: '1', donemGetiri6a: '1',
+      donemGetiriyb: '1', donemGetiri1y: '1', donemGetiri3y: '1', donemGetiri5y: '1',
+    }, 'risk değeri');
+    return normalizeMeta(fees, rets);
+  }
+
+  async request(url, body, label) {
     let lastErr;
     for (let attempt = 1; attempt <= this.retries; attempt++) {
       const wait = this.last + this.pauseMs - Date.now();
@@ -77,7 +91,7 @@ export class TefasClient {
       this.last = Date.now();
       this.requests++;
       try {
-        const res = await postJson(URLS[kind], body, { connectTimeoutMs: this.connectTimeoutMs, timeoutMs: this.timeoutMs });
+        const res = await postJson(url, body, { connectTimeoutMs: this.connectTimeoutMs, timeoutMs: this.timeoutMs });
         if (res.status === 429 || res.status >= 500) throw new Error(`HTTP ${res.status}`);
         const text = res.text;
         if (!text.trim()) throw new Error('boş yanıt');
@@ -89,11 +103,11 @@ export class TefasClient {
       } catch (err) {
         if (err.fatal) throw err;
         lastErr = err;
-        this.log(`TEFAS ${kind} ${ymd(start)}-${ymd(end)} deneme ${attempt}: ${err.message}`);
+        this.log(`TEFAS ${label} deneme ${attempt}: ${err.message}`);
         if (attempt < this.retries) await sleep(this.retryWaitMs);
       }
     }
-    throw new Error(`TEFAS ${kind} ${ymd(start)}-${ymd(end)}: ${this.retries} denemede cevap yok (${lastErr?.message})`);
+    throw new Error(`TEFAS ${label}: ${this.retries} denemede cevap yok (${lastErr?.message})`);
   }
 
   async range(kind, start, end) {
@@ -104,6 +118,29 @@ export class TefasClient {
 }
 
 export const isKatilim = (name) => String(name || '').toLocaleUpperCase('tr-TR').includes('KATILIM');
+
+// "0,85" → 0.85; boş → null
+export function trDecimal(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const x = Number(String(v).replace(',', '.'));
+  return Number.isFinite(x) ? x : null;
+}
+
+// { kod: { type, type_code, founder, fee, fee_prospectus, max_ter, tefas_status, risk } }
+export function normalizeMeta(feeRows, returnRows = []) {
+  const risk = Object.fromEntries(returnRows.map((r) => [r.fonKodu, trDecimal(r.riskDegeri)]));
+  return Object.fromEntries(feeRows.map((r) => [r.fonKodu, {
+    name: r.fonUnvan,
+    type: r.fonTurAciklama ?? null,
+    type_code: r.fonTurKod ?? null,
+    founder: r.kurucuKod ?? null,
+    fee: trDecimal(r.uygulananYu1Y),
+    fee_prospectus: trDecimal(r.fonIcTuzukYu1G),
+    max_ter: trDecimal(r.fonTopGiderKesoran),
+    tefas_status: r.tefasDurum ?? null,
+    risk: risk[r.fonKodu] ?? null,
+  }]));
+}
 
 export function normalizeInfo(r) {
   return {

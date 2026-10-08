@@ -35,8 +35,10 @@ export function shrinkScore(raw, history_months, full_months) {
   return { score: 50 + confidence * (raw - 50), confidence };
 }
 
+// Ücret ya da azami gider bilinmiyorsa o koşul cezalandırılmaz.
 export function hygiene(fee, max_ter, size_tl, small_fund_tl) {
-  return Math.max(0, 1 - 0.5 * (fee > max_ter ? 1 : 0) - 0.5 * (size_tl < small_fund_tl ? 1 : 0));
+  const overFee = fee !== null && fee !== undefined && max_ter !== null && max_ter !== undefined && fee > max_ter;
+  return Math.max(0, 1 - 0.5 * (overFee ? 1 : 0) - 0.5 * (size_tl < small_fund_tl ? 1 : 0));
 }
 
 // Dönem sürekliliği: fonun değeri olan ve kategoride en az min_peers değer bulunan her dönemde

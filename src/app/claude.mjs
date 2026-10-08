@@ -17,7 +17,7 @@ export function buildPrompt({ latest, state, drift, targets, bands, due, proposa
     for (const [code, w] of Object.entries(drift.current).sort((a, b) => b[1] - a[1])) {
       const f = funds[code];
       const nm = f ? fundNames(f.name).short : '';
-      L.push(`- ${code} ${nm}: girişte %${num(state.allocation.weights[code], 1)}, bugün %${num(w, 1)}` + (f?.score !== null && f?.score !== undefined ? `, puan ${num(f.score, 0)} (${f.rank}/${f.peers})` : ''));
+      L.push(`- ${code} ${nm}${f?.tefas_type ? ` [${f.tefas_type}]` : ''}: girişte %${num(state.allocation.weights[code], 1)}, bugün %${num(w, 1)}` + (f?.score !== null && f?.score !== undefined ? `, puan ${num(f.score, 0)} (${f.rank}/${f.peers})` : '') + (f?.fee !== null && f?.fee !== undefined ? `, ücret %${num(f.fee, 2)}` : ''));
     }
     L.push(`Giriş tarihinden bu yana dağılımın getirisi: ${pct(drift.return_pct, 1)}.`);
     L.push('');
@@ -60,7 +60,7 @@ export function buildPrompt({ latest, state, drift, targets, bands, due, proposa
   const best = {};
   for (const f of latest.funds) if (f.halal && f.score !== null && (!best[f.category] || f.score > best[f.category].score)) best[f.category] = f;
   for (const [cat, f] of Object.entries(best)) {
-    L.push(`- ${latest.category_labels[cat] || cat}: ${f.code} ${fundNames(f.name).short}, puan ${num(f.score, 0)}, 1 yıl ${pct(f.returns?.['1y'], 1)}, fazla getiri indisi ${signed(f.indices?.excess, 2)}`);
+    L.push(`- ${latest.category_labels[cat] || cat}: ${f.code} ${fundNames(f.name).short}, puan ${num(f.score, 0)}, 1 yıl ${pct(f.returns?.['1y'], 1)}, fazla getiri indisi ${signed(f.indices?.excess, 2)}, ücret ${pct(f.fee, 2)}`);
   }
   L.push('');
   L.push('Sorularım: Dağılımım hedeften neden ve ne kadar sapıyor? Modelin önerisi mantıklı mı, gözden kaçan bir risk var mı? Çapamı değiştirmem gerekir mi?');

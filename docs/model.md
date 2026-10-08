@@ -21,16 +21,30 @@ Her iş günü: dağılımım ne durumda, piyasa ve fonlar ne söylüyor, dağı
 
 - **TEFAS** (`fonGnlBlgSiraliGetir`, `dagilimSiraliGetirT`): fiyat, pay, kişi sayısı, büyüklük,
   içerik dağılımı. Getiriler fiyattan hesaplanır. İçerik geçmişi aylık anlık görüntülerle tutulur.
+- **TEFAS** (`fonYonetimBazliBilgiGetir`, `fonGetiriBazliBilgiGetir`): fon türü (`fonTurAciklama`,
+  `fonTurKod`), kurucu, uygulanan ve iç tüzükteki yıllık fon işletim gideri, azami toplam gider kesintisi,
+  SPK risk değeri (1–7). Ayrıntı: `docs/tefas_types.md`.
 - **EVDS:** TÜFE, politika faizi, USD/TRY, gram altın TL, sanayi üretimi veya imalat PMI.
 - **FRED:** ABD TÜFE, politika faizi, 10 yıllık faiz, sanayi üretimi, S&P 500.
 - Veri gelmeyen gün son geçerli değer kullanılır; günlük fiyat değişimi %15'i aşarsa "Şüpheli veri".
 
 ## 3. Evren ve sınıflandırma
 
-- **Helal filtresi:** adında KATILIM; içerikte faizli araç payı 0; elle beyaz ve kara liste.
-  Faizli alanların kesin listesi canlı alan adlarından sonra kullanıcı onayıyla belirlenir.
-- **Kategori:** fon adındaki anahtar kelimeyle (GÜMÜŞ, KIYMETLİ MADEN, ALTIN, HİSSE, KARMA,
-  DEĞİŞKEN, ÇOKLU VARLIK, PARA PİYASASI, KİRA SERTİFİKA, DÖVİZ); eşleşmeyen elle atanır.
+- **Helal filtresi:**
+  1. Katılım fonu: TEFAS fon türünde "Katılım" geçer (Altın Katılım, Katılım Hisse Senedi, Kira Sertifikası
+     Katılım, Katılım Değişken, Katılım Fonu, Katılım Standart, OKS Katılım Standart, Başlangıç Katılım,
+     Katılım Katkı) **ya da** fonun adında KATILIM vardır. TEFAS'ta adında KATILIM olup genel türde duran
+     fonlar var (Değişken, Karma, Para Piyasası, Kıymetli Madenler, Fon Sepeti, Merkezi Alacağın Devri);
+     türü katılım olup adında KATILIM olmayan fon yok.
+  2. İçerikte faizli araç payı 0. Faizli alanlar: devlet tahvili, hazine bonosu, finansman bonosu, özel sektör
+     tahvili, banka bonosu, varlığa dayalı menkul kıymet, eurobond, kamu ve özel sektör dış borçlanma araçları,
+     döviz cinsinden kamu iç borçlanma, repo ve ters repo, TL/döviz/altın mevduat, Takasbank ve BİST para
+     piyasası, altın tahvili, yabancı borçlanma araçları.
+  3. Elle beyaz ve kara liste. Her fonun ekranında kararın dayanağı gösterilir.
+- **Kategori:** önce TEFAS fon türünden (`type_categories` parametresi), eşleşmezse fon adındaki anahtar
+  kelimeyle (GÜMÜŞ, KIYMETLİ MADEN, ALTIN, HİSSE, KARMA, DEĞİŞKEN, ÇOKLU VARLIK, PARA PİYASASI,
+  KİRA SERTİFİKA, DÖVİZ). TEFAS türünden gelen ek kategoriler: Standart, Başlangıç, Katkı (devlet katkısı),
+  Merkezi alacak devri.
 - **Varlık sınıfları:** Altın, Gümüş, TL sabit, Yurtiçi hisse, Yabancı hisse, Döviz sabit, Belirsiz.
   Kıymetli maden gümüş fonunda Gümüş, diğerlerinde Altın; fon sepeti fonun ana sınıfına (karma
   fonda Belirsiz); "diğer" para piyasası fonunda TL sabit, diğerlerinde Belirsiz.
@@ -89,7 +103,7 @@ puanlanmaz, en çok %5 ağırlık alır.
 | Süreklilik | 0,35 | Ham (0–1) |
 | Fazla getiri indisi | 0,30 | Medyan, ölçek 0,5 puan/ay |
 | Risk | 0,15 | Medyan; pasife yakın kategoride izleme hatası (ölçek 2 puan), aktifte MDD (10 puan) ve Sortino (0,5) ortalaması |
-| Maliyet | 0,15 | Medyan, ölçek 0,5 puan, düşük iyi |
+| Maliyet | 0,15 | TEFAS uygulanan yıllık fon işletim gideri; medyan, ölçek 0,5 puan, düşük iyi |
 | Hijyen | 0,05 | Ham |
 
 - **Fazla getiri:** fon getirisi, içeriğinden beklenen getiriyle kıyaslanır:
@@ -105,7 +119,8 @@ puanlanmaz, en çok %5 ağırlık alır.
 - **Medyan ölçeği:** `c = 0,5 + işaret · (x − medyan) / (2 · ölçek)`, 0–1 arasına kırpılır.
   Medyandaki fon 0,5 alır; 50 puan kategori ortasıdır.
 - **Kısa geçmiş güveni:** `Q = 50 + min(1, ay / 36) · (Q_ham − 50)`.
-- **Hijyen:** `max(0, 1 − 0,5·[ücret > azami gider] − 0,5·[büyüklük < 500 milyon TL])`.
+- **Hijyen:** `max(0, 1 − 0,5·[ücret > azami toplam gider kesintisi] − 0,5·[büyüklük < 500 milyon TL])`;
+  ücret ya da azami gider bilinmiyorsa o koşul cezalandırılmaz.
 - **Bayraklar (puana girmez):** Yeni fon, Isınma (30 günde kişi +%20), Strateji kayması (30 günde
   bir sınıfta 15 puan), Şüpheli veri, Helal uyarısı.
 
@@ -165,3 +180,4 @@ Ek A'daki 8 fonla, yılbaşı = 9 ay:
   fazla getiri.
 - Hak sayacı, Google Sheet, TL tutar ve XIRR ilk sürümden çıkarıldı. Ledoit-Wolf kapalı (Ö2).
 - Çapada olmayan sınıf izlenir (onay bekliyor).
+- Helal filtresi TEFAS fon türüyle birlikte; kategori önce TEFAS türünden; ücret ve azami gider TEFAS'tan.

@@ -54,14 +54,21 @@ export function fundExposure(fund, universe) {
   return { exposure: out, unknown_fields: unknown, interest };
 }
 
-// Helal filtresi: adında KATILIM, faizli araç payı 0; beyaz liste her şeyi geçer, kara liste dışarıda bırakır.
+// Helal filtresi (docs/model.md, Bölüm 3):
+//  1. katılım fonu: TEFAS fon türünde "Katılım" geçiyor ya da adında KATILIM var;
+//  2. içerikte faizli araç payı 0;
+//  3. beyaz liste her şeyi geçer, kara liste dışarıda bırakır.
+// basis: kararın dayanağı (ekranda gösterilir).
 export function halalCheck(fund, interest, universe) {
-  if (universe.whitelist.includes(fund.code)) return { halal: true, reason: 'beyaz liste' };
-  if (universe.blacklist.includes(fund.code)) return { halal: false, reason: 'kara liste' };
-  if (!String(fund.name || '').toLocaleUpperCase('tr-TR').includes('KATILIM')) return { halal: false, reason: 'adında KATILIM yok' };
+  const byType = /katılım/i.test(fund.type || '');
+  const byName = String(fund.name || '').toLocaleUpperCase('tr-TR').includes('KATILIM');
+  const basis = byType ? `TEFAS türü: ${fund.type}` : byName ? `adında KATILIM${fund.type ? ` (TEFAS türü: ${fund.type})` : ''}` : null;
+  if (universe.whitelist.includes(fund.code)) return { halal: true, reason: 'beyaz liste', basis: 'beyaz liste' };
+  if (universe.blacklist.includes(fund.code)) return { halal: false, reason: 'kara liste', basis };
+  if (!byType && !byName) return { halal: false, reason: 'katılım fonu değil', basis };
   const fields = Object.entries(interest).filter(([, v]) => v > 0);
-  if (fields.length) return { halal: false, reason: 'faizli araç: ' + fields.map(([k, v]) => `${k} %${v}`).join(', ') };
-  return { halal: true, reason: null };
+  if (fields.length) return { halal: false, reason: 'faizli araç: ' + fields.map(([k, v]) => `${k} %${v}`).join(', '), basis };
+  return { halal: true, reason: null, basis };
 }
 
 export function mainClass(exposure) {
