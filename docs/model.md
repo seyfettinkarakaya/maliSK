@@ -43,8 +43,10 @@ Her iş günü: dağılımım ne durumda, piyasa ve fonlar ne söylüyor, dağı
   3. Elle beyaz ve kara liste. Her fonun ekranında kararın dayanağı gösterilir.
 - **Kategori:** önce TEFAS fon türünden (`type_categories` parametresi), eşleşmezse fon adındaki anahtar
   kelimeyle (GÜMÜŞ, KIYMETLİ MADEN, ALTIN, HİSSE, KARMA, DEĞİŞKEN, ÇOKLU VARLIK, PARA PİYASASI,
-  KİRA SERTİFİKA, DÖVİZ). TEFAS türünden gelen ek kategoriler: Standart, Başlangıç, Katkı (devlet katkısı),
-  Merkezi alacak devri.
+  KİRA SERTİFİKA, DÖVİZ); o da yoksa içerikteki ana sınıfa göre. TEFAS türünden gelen ek kategoriler:
+  Standart, Başlangıç, Katkı (devlet katkısı), Merkezi alacak devri.
+- **Strateji değiştiren fon:** geçmişi dönüşüm tarihinden başlar (`history_start`), "Strateji değişti" bayrağı alır.
+  AUA: SPK 12.08.2026 izniyle Fon Sepeti EYF → Kira Sertifikaları Katılım EYF; yeni ölçüt 01.10.2026.
 - **Varlık sınıfları:** Altın, Gümüş, TL sabit, Yurtiçi hisse, Yabancı hisse, Döviz sabit, Belirsiz.
   Kıymetli maden gümüş fonunda Gümüş, diğerlerinde Altın; fon sepeti fonun ana sınıfına (karma
   fonda Belirsiz); "diğer" para piyasası fonunda TL sabit, diğerlerinde Belirsiz.

@@ -63,6 +63,7 @@ export const FLAG_LABELS = {
   strateji_kaymasi: 'Strateji kayması',
   supheli_veri: 'Şüpheli veri',
   helal_uyarisi: 'Helal dışı',
+  donusum: 'Strateji değişti',
 };
 
 export function todayIstanbul() {

@@ -108,6 +108,14 @@ export const DEFAULT_PARAMS = {
       'Fon Sepeti Fonu': null,
     },
     category_overrides: {},
+    // Ad ve TEFAS türüyle kategorisi bulunamayan fon, içeriğindeki ana sınıfa göre yerleştirilir.
+    main_class_categories: {
+      gold: 'gold', silver: 'silver', equity_tr: 'equity', equity_foreign: 'equity',
+      tl_fixed: 'lease_tl', fx_fixed: 'fx', unclassified: 'mixed',
+    },
+    // Strateji değiştiren fonların geçmişi bu tarihten başlar (öncesi başka bir fona ait).
+    // AUA: SPK 12.08.2026 izniyle Fon Sepeti EYF → Kira Sertifikaları Katılım EYF; yeni ölçüt 01.10.2026.
+    history_start: { AUA: '2026-10-01' },
     basket_unclassified_categories: ['mixed'],
     other_tl_categories: ['money_market'],
     passive_categories: ['gold', 'silver', 'precious_metals', 'money_market', 'lease_tl', 'fx', 'starter'],

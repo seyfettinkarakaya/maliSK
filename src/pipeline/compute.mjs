@@ -37,15 +37,23 @@ export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }
 
   // 1. Evren: kategori, içerik, helal filtresi, maruziyet.
   const funds = {};
-  for (const [code, list] of Object.entries(prices)) {
+  for (const [code, fullList] of Object.entries(prices)) {
+    const start = U.history_start[code];
+    const list = start ? fullList.filter((r) => r.date >= start) : fullList;
+    if (!list.length) continue;
     const meta = fundsMeta[code] || {};
     const tm = typeMeta.funds?.[code] || {};
     const name = meta.name || code;
     // Kategori önce TEFAS fon türünden, eşleşmezse addaki anahtar kelimeden.
-    const category = U.category_overrides[code] || (tm.type && U.type_categories[tm.type]) || categoryFromName(name, U.category_keywords);
+    let category = U.category_overrides[code] || (tm.type && U.type_categories[tm.type]) || categoryFromName(name, U.category_keywords);
     const snap = contentAt(contents, code, dataDate);
     const content = snap ? snap.map[code] : {};
-    const fe = fundExposure({ category, content }, U);
+    let fe = fundExposure({ category, content }, U);
+    if (category === 'unclassified' && snap) {
+      // Son çare: içerikteki ana sınıf (ör. teknoloji ve sürdürülebilirlik katılım fonları → hisse).
+      category = U.main_class_categories[mainClass(fe.exposure)] || 'unclassified';
+      fe = fundExposure({ category, content }, U);
+    }
     const halal = snap ? halalCheck({ code, name, type: tm.type }, fe.interest, U) : { halal: false, reason: 'içerik verisi yok', basis: null };
     const dates = list.map((r) => r.date);
     const values = list.map((r) => r.price);
@@ -54,6 +62,7 @@ export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }
       main_class: mainClass(fe.exposure), halal: halal.halal, halal_reason: halal.reason, halal_basis: halal.basis,
       tefas_type: tm.type ?? null, type_code: tm.type_code ?? null, founder: tm.founder ?? null,
       fee: tm.fee ?? null, fee_prospectus: tm.fee_prospectus ?? null, max_ter: tm.max_ter ?? null, risk: tm.risk ?? null,
+      history_start: start || null,
       dates, values, rets: dailyReturns(dates, values), last: list[list.length - 1],
     };
   }
@@ -232,10 +241,11 @@ export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }
     const flags = [];
     const m = metrics[f.code];
     if (!f.halal) flags.push('helal_uyarisi');
+    if (f.history_start) flags.push('donusum');
     if (m && m.history_months < fq.min_history_months) flags.push('yeni_fon');
     const r = f.rets.get(f.dates[f.dates.length - 1]);
     if (r !== undefined && Math.abs(r) * 100 > params.general.suspicious_move_pct) flags.push('supheli_veri');
-    const list = prices[f.code];
+    const list = prices[f.code].filter((r) => !f.history_start || r.date >= f.history_start);
     const old = list[onOrBefore(f.dates, shiftDays(dataDate, -30))];
     if (old && old.investors > 0 && (f.last.investors / old.investors - 1) * 100 > fq.warming_pct) flags.push('isinma');
     const prev = contents.filter((s) => s.date <= shiftDays(dataDate, -30) && s.map[f.code]).pop();
@@ -297,6 +307,7 @@ export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }
           size_tl: f.last.size_tl,
           investors: f.last.investors,
           first_date: f.dates[0],
+          history_start: f.history_start || undefined,
           history_months: m ? round(m.history_months, 1) : null,
           returns: m ? roundObj(m.raw, 2) : undefined,
           excess: m ? roundObj(m.excess, 2) : undefined,
