@@ -116,9 +116,11 @@ test('S: iki katmanlı risk eşitliğinde grupların risk payı eşit', () => {
   const w = ids.map((id) => weights[id]);
   near(w.reduce((a, b) => a + b, 0), 1, 1e-9);
   const rc = riskContributions(w, cov);
-  const g1 = rc[0] + rc[1] + rc[2];
+  const g1 = rc[0] + rc[1];
   const g2 = rc[3] + rc[4];
-  near(g1 / (g1 + g2), 0.5, 1e-6);
+  const g3 = rc[2]; // döviz sabit tek başına grup
+  const tot = g1 + g2 + g3;
+  [g1, g2, g3].forEach((g) => near(g / tot, 1 / 3, 1e-6));
 });
 
 test('Çapa önerisi: hedef oynaklık, tavan ve negatif reel faiz', () => {

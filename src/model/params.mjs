@@ -127,7 +127,8 @@ export const DEFAULT_PARAMS = {
     class_cap_pct: 40,
     shrinkage: 'none', // Ö2: ilk fazda kapalı
     // Kullanıcının seçtiği gruplar; uygulama verilerden ayrıca öneri üretir.
-    groups: [['gold', 'silver', 'fx_fixed'], ['equity_tr', 'equity_foreign']],
+    // Döviz sabit ayrı grup (kullanıcı kararı, 8 Ekim 2026): grupta olmayan sınıf tek başına grup olur.
+    groups: [['gold', 'silver'], ['equity_tr', 'equity_foreign']],
     min_funds_per_class: 3,
     tl_fixed_factor_negative_real_rate: 0.5,
   },

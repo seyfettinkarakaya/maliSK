@@ -62,8 +62,9 @@ Uygulama çapayı önerir; kullanıcı kendi çapasını Ayarlar'da girer. Bantl
 1. Riskli sınıfların son 3 yıllık **haftalık** getirilerinden yıllık kovaryans `Σ`.
    Ledoit-Wolf küçültmesi parametredir, ilk sürümde kapalı.
 2. **İki katmanlı eşit risk:** önce grup içinde, sonra gruplar arasında her biri eşit risk katkısı:
-   `RK_i = w_i · (Σ w)_i / √(wᵀ Σ w)`. Varsayılan gruplar: Koruma (Altın, Gümüş, Döviz sabit),
-   Büyüme (Yurtiçi hisse, Yabancı hisse). Gruplar parametredir.
+   `RK_i = w_i · (Σ w)_i / √(wᵀ Σ w)`. Varsayılan gruplar: Kıymetli maden (Altın, Gümüş),
+   Hisse (Yurtiçi hisse, Yabancı hisse), Döviz sabit ayrı grup. Grupta olmayan sınıf tek başına grup olur.
+   Gruplar parametredir.
 3. **Gruplama önerisi:** korelasyondan uzaklık `√((1 − ρ) / 2)` ile ortalama bağlantılı kümeleme.
    Ekranda düz, kullanıcının gruplaması ve önerilen gruplamaya göre çapa yan yana gösterilir.
 4. **Hedef oynaklık:** `k = min(1, σ_hedef / σ_riskli)`; riskli ağırlıklar × k; TL sabit = 1 − k.
