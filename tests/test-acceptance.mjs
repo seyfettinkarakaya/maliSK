@@ -71,13 +71,17 @@ test('Test 6: bant kontrolü (sarı eşik hedefin yüzdesi, sürüm 2.7)', () =>
   const e = portfolioExposure({ KJM: 30, KGC: 20, AGA: 20, AGH: 10, KRM: 20 }, exposures);
   const targets = { gold: 35, silver: 5, tl_fixed: 30, equity_tr: 20, equity_foreign: 10 };
   const st = (d) => Object.fromEntries(Object.entries(bandCheck(e, targets, d)).map(([c, r]) => [c, r.status]));
-  // Sarı %10: Yurtiçi hisse (17,3) 18–22 aralığının altında.
-  assert.deepEqual(st(P.decision), { gold: 'above', silver: 'above', tl_fixed: 'below', equity_tr: 'below', equity_foreign: 'below' });
+  // Sarı %15: Yurtiçi hisse (17,3) 17–23 içinde, Yabancı hisse (4,8) 8,5–11,5 altında.
+  assert.deepEqual(st(P.decision), { gold: 'above', silver: 'above', tl_fixed: 'below', equity_tr: 'inside', equity_foreign: 'below' });
+  // Sarı %10: Yurtiçi hisse 18–22 altında.
+  const tight = { ...P.decision, yellow_rel_pct: 10, red_rel_pct: 20 };
+  assert.deepEqual(st(tight), { gold: 'above', silver: 'above', tl_fixed: 'below', equity_tr: 'below', equity_foreign: 'below' });
   // Sarı %25: Yurtiçi hisse 15–25 içinde, Yabancı hisse (4,8) 7,5–12,5 altında.
   const wide = { ...P.decision, yellow_rel_pct: 25, red_rel_pct: 50 };
   assert.deepEqual(st(wide), { gold: 'above', silver: 'above', tl_fixed: 'below', equity_tr: 'inside', equity_foreign: 'below' });
-  // Seviye: Yurtiçi hisse sapması 2,7 < kırmızı 4 → sarı; Altın sapması 11 ≥ 7 → kırmızı.
+  // Seviye (%10/%20): Yurtiçi hisse sapması 2,7 < kırmızı 4 → sarı. Varsayılan (%15/%30): Altın sapması 11 ≥ 10,5 → kırmızı.
+  assert.equal(bandCheck(e, targets, tight).equity_tr.level, 'yellow');
   const lv = bandCheck(e, targets, P.decision);
-  assert.equal(lv.equity_tr.level, 'yellow');
+  assert.equal(lv.equity_tr.level, null);
   assert.equal(lv.gold.level, 'red');
 });

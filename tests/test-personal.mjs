@@ -212,8 +212,8 @@ test('geçmişten sayma: bugün girilen dağılımda sayaç geçmişi kapsar', a
 
 test('kırmızı uyarı: hedefin yüzdesi kadar sapmada beklemeden öneri', async () => {
   const { recommendationDue } = await import('../src/app/personal.mjs');
-  // Kıymetli maden 36 / hedef 30: sapma 6 (%20) → kırmızı. Hisse 26 / hedef 30: sapma 4 (%13) → sarı, teyit bekler.
-  const bands = { groups: { precious_metals: { value: 36, target: 30, width: 3, status: 'above' }, equity: { value: 26, target: 30, width: 3, status: 'below' } }, splits: {}, counters: { 'group:precious_metals': 2, 'group:equity': 3 } };
+  // Kıymetli maden 40 / hedef 30: sapma 10 (%33) → kırmızı. Hisse 25 / hedef 30: sapma 5 (%17) → sarı, teyit bekler.
+  const bands = { groups: { precious_metals: { value: 40, target: 30, width: 4.5, status: 'above' }, equity: { value: 25, target: 30, width: 4.5, status: 'below' } }, splits: {}, counters: { 'group:precious_metals': 2, 'group:equity': 3 } };
   const r = recommendationDue(bands, [], '2026-09-30', P);
   assert.deepEqual(r.immediate, ['group:precious_metals']);
   assert.equal(r.active, true);
@@ -221,7 +221,7 @@ test('kırmızı uyarı: hedefin yüzdesi kadar sapmada beklemeden öneri', asyn
   // Küçük grupta da aynı ölçü: döviz 7 / hedef 10 → sapma %30 → kırmızı.
   const fx = { groups: { fx: { value: 7, target: 10, width: 1, status: 'below' } }, splits: {}, counters: { 'group:fx': 1 } };
   assert.deepEqual(recommendationDue(fx, [], '2026-09-30', P).immediate, ['group:fx']);
-  const p5 = { ...P, decision: { ...P.decision, red_rel_pct: 12 } };
+  const p5 = { ...P, decision: { ...P.decision, red_rel_pct: 16 } };
   assert.deepEqual(recommendationDue(bands, [], '2026-09-30', p5).immediate, ['group:precious_metals', 'group:equity']);
   // "Şimdi değil" bekleme süresi.
   const sn = recommendationDue(bands, [{ date: '2026-09-25', action: 'reddedildi' }], '2026-09-30', p5);

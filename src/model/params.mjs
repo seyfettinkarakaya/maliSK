@@ -205,8 +205,8 @@ export const DEFAULT_PARAMS = {
   decision: {
     // Sarı ve kırmızı uyarı: grubun sapması hedefinin bu yüzdesini aşarsa (göreli; küçük gruplarda da çalışır).
     // Sarı: aralık dışı, confirm_days sürerse öneri. Kırmızı: beklemeden öneri.
-    yellow_rel_pct: 10,
-    red_rel_pct: 20,
+    yellow_rel_pct: 15,
+    red_rel_pct: 30,
     confirm_days: 20,
     // "Şimdi değil" denince aynı tür öneri bu kadar iş günü tekrar gelmez (riskli fon uyarıları hariç).
     snooze_days: 20,
