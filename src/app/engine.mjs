@@ -2,12 +2,12 @@
 // DOM ve ağ erişimi yok; latest.json ve kişisel durum girdi olarak gelir.
 import { DEFAULT_PARAMS, PARAM_META } from '../model/params.mjs';
 import { effectiveParams, paramVersion } from '../model/paramedit.mjs';
-import { applyParams, combineContracts, currentExposure, targetsToday, bandHistory, recommendationDue, buildProposal, contractSteps, migrateState, fundSignals, promisingFunds } from './personal.mjs';
+import { applyParams, combineContracts, currentExposure, targetsToday, bandHistory, recommendationDue, buildProposal, contractSteps, migrateState, fundSignals, promisingFunds, restrictFounders } from './personal.mjs';
 
 export function compute(latestRaw, stateIn, { withProposal = false } = {}) {
   const state = migrateState(stateIn);
   const P = effectiveParams(DEFAULT_PARAMS, state.params?.values, PARAM_META);
-  const latest = applyParams(latestRaw, P);
+  const latest = restrictFounders(applyParams(latestRaw, P), stateIn?.founders);
   const m = { P, param_version: paramVersion(DEFAULT_PARAMS, state.params), latest, state, data_date: latest.data_date };
   const suggested = latest.anchor?.ok ? latest.anchor.user_groups.weights : null;
   const anchor = state.anchor || suggested;

@@ -38,6 +38,21 @@ export function applyParams(latest, P) {
 // Akran grubu: hattan gelir; eski veride kategori.
 export const peerOf = (f) => f.peer_group ?? f.category;
 
+// Fon firmaları (docs/model.md, Bölüm 8.2): puan tüm BES'e göre kalır; sıra (zayıf, değiştir, öneri adayı)
+// yalnız seçilen firmaların fonları arasında. founders boşsa hepsi. Tüm BES'teki sıra rank_all'da kalır.
+export function restrictFounders(latest, founders) {
+  const set = founders && founders.length ? new Set(founders) : null;
+  const funds = latest.funds.map((f) => ({ ...f, allowed: !set || set.has(f.founder), rank_all: f.rank, peers_all: f.peers }));
+  if (set) {
+    const by = {};
+    for (const f of funds) {
+      if (!f.allowed) { f.rank = null; f.peers = null; } else if (f.halal && f.score !== null) (by[peerOf(f)] ||= []).push(f);
+    }
+    for (const l of Object.values(by)) l.sort((a, b) => b.score - a.score).forEach((f, i) => { f.rank = i + 1; f.peers = l.length; });
+  }
+  return { ...latest, funds, founders_on: !!set };
+}
+
 export function fundIndex(latest) {
   return Object.fromEntries(latest.funds.map((f) => [f.code, f]));
 }
@@ -267,7 +282,7 @@ export function categoryLeaders(latest, params) {
   const out = {};
   for (const f of latest.funds) {
     if (!f.halal || f.score === null || f.category === 'unclassified' || params.allocation.excluded_categories.includes(f.category)) continue;
-    if (f.flags.some((x) => RISK_FLAGS.includes(x))) continue;
+    if (f.flags.some((x) => RISK_FLAGS.includes(x)) || f.allowed === false) continue;
     (out[f.category] ||= []).push(f);
   }
   for (const l of Object.values(out)) l.sort((a, b) => b.score - a.score);
@@ -288,7 +303,7 @@ export function fundSignals(latest, current, params) {
   const d = params.decision;
   const funds = fundIndex(latest);
   const leaders = peerLeaders(latest, params);
-  const out = { switches: [], weak: [], risks: [], fresh: [], good: [] };
+  const out = { switches: [], weak: [], risks: [], fresh: [], good: [], outside: [] };
   for (const [code, w] of Object.entries(current)) {
     if (w <= 0) continue;
     const f = funds[code];
@@ -304,6 +319,12 @@ export function fundSignals(latest, current, params) {
       continue;
     }
     for (const x of flags) out.risks.push({ code, weight: w, kind: x, text: { donusum: 'strateji değişti', strateji_kaymasi: 'stratejisi kaydı', supheli_veri: 'verisi şüpheli' }[x] });
+    // Seçilmeyen firmanın fonu: puan farkına bakılmadan seçilen firmalardaki aynı türün en iyisi önerilir.
+    if (f.allowed === false) {
+      out.outside.push({ code, weight: w });
+      if (best) out.switches.push({ from: code, to: best.code, weight: w, outside: true, reason: `seçmediğin firma; yerine seçtiklerinde aynı türün en iyisi ${best.code} (${Math.round(best.score)})` });
+      continue;
+    }
     if (f.score === null) { out.fresh.push({ code, weight: w }); continue; }
     const rank = f.rank ?? null;
     if (rank !== null && rank <= d.fund_top_n) { out.good.push({ code, rank, peers: f.peers }); continue; }
@@ -329,11 +350,11 @@ export function promisingFunds(latest, params) {
   const watch = [];
   for (const f of latest.funds) {
     if (!ok(f)) continue;
-    if (f.score === null && f.flags.includes('yeni_fon')) { watch.push({ code: f.code, months: f.history_months }); continue; }
+    if (f.score === null && f.flags.includes('yeni_fon')) { watch.push({ code: f.code, months: f.history_months, allowed: f.allowed !== false }); continue; }
     if (f.score === null || f.history_months >= fq.full_confidence_months) continue;
     const r = rawRank[f.code];
     if (!r || (r.rank > fq.promising_top_n && f.raw_score < fq.promising_min_raw)) continue;
-    promising.push({ code: f.code, months: f.history_months, raw: f.raw_score, score: f.score, raw_rank: r.rank, peers: r.peers });
+    promising.push({ code: f.code, months: f.history_months, raw: f.raw_score, score: f.score, raw_rank: r.rank, peers: r.peers, allowed: f.allowed !== false });
   }
   promising.sort((a, b) => b.raw - a.raw);
   watch.sort((a, b) => b.months - a.months);

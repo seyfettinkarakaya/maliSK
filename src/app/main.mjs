@@ -278,7 +278,7 @@ function explain(key, m) {
     return {
       title: `${esc(f.code)} puanı`,
       html: '<div class="formula">puan = 100 × Σ ağırlık × bileşen / Σ ağırlık<br>bileşen = 0,5 + (değer − akran grubu medyanı) / (2 × ölçek)<br>puan = 50 + güven × (ham − 50)</div>'
-        + sheetTable([...Object.keys(w).map((k) => [names[k], c[k] === null || c[k] === undefined ? 'veri yok' : `${num(w[k], 2)} × ${num(c[k], 3)}`]), ['Akran grubu', `${esc(peerName(f))} · ${f.peers} fon`], ['Ham puan', num(f.raw_score, 1)], ['Güven (geçmiş / 36 ay)', `${num(f.history_months, 0)} ay → %${num((f.confidence ?? 1) * 100, 0)}`]], ['Puan', num(f.score, 1)]) + foot,
+        + sheetTable([...Object.keys(w).map((k) => [names[k], c[k] === null || c[k] === undefined ? 'veri yok' : `${num(w[k], 2)} × ${num(c[k], 3)}`]), ['Akran grubu', `${esc(peerName(f))} · ${f.peers_all} fon`], ...(m.latest.founders_on ? [['Sıra: tüm BES / seçtiğin firmalar', `${f.rank_all ?? '—'}. / ${f.rank ? `${f.peers} fonda ${f.rank}.` : 'dışarıda'}`]] : []), ['Ham puan', num(f.raw_score, 1)], ['Güven (geçmiş / 36 ay)', `${num(f.history_months, 0)} ay → %${num((f.confidence ?? 1) * 100, 0)}`]], ['Puan', num(f.score, 1)]) + foot,
     };
   }
   if (kind === 'alert') {
@@ -475,8 +475,9 @@ function viewFonSinyal(m) {
   const sw = Object.fromEntries(m.funds.switches.map((x) => [x.from, x]));
   const risk = Object.fromEntries(m.funds.risks.map((x) => [x.code, x]));
   const weak = Object.fromEntries(m.funds.weak.map((x) => [x.code, x]));
+  const outside = Object.fromEntries(m.funds.outside.map((x) => [x.code, x]));
   const order = Object.entries(m.drift.current).sort((a, b) => {
-    const k = (c) => (risk[c] ? 0 : sw[c] ? 1 : weak[c] ? 2 : funds[c]?.score === null ? 3 : 4);
+    const k = (c) => (risk[c] ? 0 : sw[c] ? 1 : weak[c] || outside[c] ? 2 : funds[c]?.score === null ? 3 : 4);
     return k(a[0]) - k(b[0]) || b[1] - a[1];
   });
   const rows = order.map(([code, w]) => {
@@ -486,6 +487,7 @@ function viewFonSinyal(m) {
     if (risk[code]) st = [risk[code].text, 'neg'];
     if (sw[code]) { st = [`→ ${sw[code].to}`, 'neg']; sub = esc(sw[code].reason); }
     else if (weak[code]) { st = [`${weak[code].rank}.`, 'warnc']; sub = `${weak[code].best_of_kind ? 'türünün en iyisi · ' : ''}ilk ${m.P.decision.fund_top_n}: ${weak[code].top.map((x) => `${esc(x.code)} ${num(x.score, 0)}`).join(' · ')}`; }
+    else if (outside[code]) { st = ['dışarıda', 'warnc']; sub = 'seçmediğin firma · seçtiklerinde aynı türden fon yok'; }
     else if (f && f.score === null) st = ['yeni', 'mut'];
     return `<button class="row" data-act="go" data-kind="fon" data-code="${esc(code)}"><span class="l" style="flex:1"><b>${esc(code)} <span class="mut" style="font-weight:700;font-size:.9rem">%${num(w, 0)}</span></b><small>${sub}</small></span><span class="r"><span class="num ${st[1]}" style="font-size:1rem">${st[0]}</span>${chev()}</span></button>`;
   }).join('');
@@ -624,7 +626,7 @@ function viewFonlar(m) {
   const keys = ['promising', ...groups, 'nonhalal'];
   if (!keys.includes(ui.category)) ui.category = groups[0];
   const mine = m.drift?.current || {};
-  const parts = [title('Fonlar', `${helal.length} helal fon · ${helal.filter((f) => f.score !== null).length} puanlı`)];
+  const parts = [title('Fonlar', `${helal.length} helal fon · ${helal.filter((f) => f.score !== null).length} puanlı${m.latest.founders_on ? ` · sıra seçtiğin ${state.founders.length} firmada` : ''}`)];
   const label = (k) => (k === 'promising' ? `Ümit vaat eden${pr.promising.length ? ` · ${pr.promising.length}` : ''}` : k === 'nonhalal' ? 'Helal dışı' : PEER_LABELS[k] || CATEGORY_LABELS[k] || k);
   parts.push(`<div class="pillrow">${keys.map((k) => `<button data-act="cat" data-cat="${k}" class="${ui.category === k ? 'on' : ''}">${esc(label(k))}</button>`).join('')}</div>`);
   if (ui.category === 'nonhalal') {
@@ -634,8 +636,8 @@ function viewFonlar(m) {
   if (ui.category === 'promising') return parts.join('') + promisingList(m, pr, mine);
   const family = !!PEER_LABELS[ui.category];
   const list = helal.filter((f) => peerOf(f) === ui.category).sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.code.localeCompare(b.code));
-  parts.push(`<div class="label">Puana göre · 50 grup ortası</div><div class="group">${list.map((f) => `<button class="row" data-act="go" data-kind="fon" data-code="${esc(f.code)}">
-    <span class="l" style="flex:1"><b>${f.rank ? `<span class="mut" style="font-size:.9rem">${f.rank}.</span> ` : ''}${esc(f.code)}${mine[f.code] ? ` <span class="tag${f.rank && f.rank > m.P.decision.fund_top_n ? ' warn' : ''}">sende %${num(mine[f.code], 0)}</span>` : ''}${f.flags.filter((x) => x !== 'yeni_fon').map((x) => ` <span class="tag warn">${FLAG_LABELS[x]}</span>`).join('')}</b>
+  parts.push(`<div class="label">Puana göre · 50 grup ortası</div><div class="group">${list.map((f) => `<button class="row${f.allowed === false ? ' dim' : ''}" data-act="go" data-kind="fon" data-code="${esc(f.code)}">
+    <span class="l" style="flex:1"><b>${f.rank ? `<span class="mut" style="font-size:.9rem">${f.rank}.</span> ` : ''}${esc(f.code)}${mine[f.code] ? ` <span class="tag${f.rank && f.rank > m.P.decision.fund_top_n ? ' warn' : ''}">sende %${num(mine[f.code], 0)}</span>` : ''}${f.allowed === false ? ' <span class="tag">seçmediğin firma</span>' : ''}${f.flags.filter((x) => x !== 'yeni_fon').map((x) => ` <span class="tag warn">${FLAG_LABELS[x]}</span>`).join('')}</b>
     <small>${family ? `${esc(CATEGORY_LABELS[f.category] || '')} · ` : ''}${esc(fundReason(f, m.P))} · ücret ${pct(f.fee, 2)}</small>${strip(exposureParts(f.exposure), 'strip thin')}</span>
     <span class="r"><span class="num ${f.score === null ? 'mut' : f.score >= 55 ? 'pos' : f.score < 45 ? 'neg' : ''}" style="font-size:1.4rem">${f.score === null ? 'yeni' : num(f.score, 0)}</span>${chev()}</span></button>`).join('')}</div>`);
   if (family) parts.push(`<p class="note">Bu ailedeki kategorilerden birinde ${m.P.fund_quality.min_peers}’ten az puanlı fon olduğu için fonlar birlikte puanlanıp sıralanıyor. Değiştir önerisi yine aynı türe gider.</p>`);
@@ -648,10 +650,10 @@ function promisingList(m, pr, mine) {
   const funds = fundIndex(m.latest);
   const parts = [];
   parts.push(`<div class="label">Ümit vaat eden · ${num(fq.min_history_months, 0)}–${num(fq.full_confidence_months, 0)} ay</div>`);
-  parts.push(pr.promising.length ? `<div class="group">${pr.promising.map((x) => `<button class="row" data-act="go" data-kind="fon" data-code="${esc(x.code)}"><span class="l" style="flex:1"><b>${esc(x.code)}${mine[x.code] ? ` <span class="tag">sende %${num(mine[x.code], 0)}</span>` : ''}</b><small>${esc(peerName(funds[x.code]))} · ${num(x.months, 0)} ay · ham puanla ${x.peers} fonda ${x.raw_rank}.</small></span><span class="r"><span class="num pos" style="font-size:1.4rem">${num(x.raw, 0)}</span>${chev()}</span></button>`).join('')}</div>` : '<p class="empty">Şu an koşulu sağlayan fon yok.</p>');
+  parts.push(pr.promising.length ? `<div class="group">${pr.promising.map((x) => `<button class="row" data-act="go" data-kind="fon" data-code="${esc(x.code)}"><span class="l" style="flex:1"><b>${esc(x.code)}${mine[x.code] ? ` <span class="tag">sende %${num(mine[x.code], 0)}</span>` : ''}${x.allowed ? '' : ' <span class="tag">seçmediğin firma</span>'}</b><small>${esc(peerName(funds[x.code]))} · ${num(x.months, 0)} ay · ham puanla ${x.peers} fonda ${x.raw_rank}.</small></span><span class="r"><span class="num pos" style="font-size:1.4rem">${num(x.raw, 0)}</span>${chev()}</span></button>`).join('')}</div>` : '<p class="empty">Şu an koşulu sağlayan fon yok.</p>');
   parts.push(`<p class="note">Büyük sayı ham puan: kısa geçmiş düzeltmesi yapılmadan. Koşul: ham puanla akran grubunda ilk ${fq.promising_top_n} ya da ham puan ${fq.promising_min_raw} ve üstü. Yalnız bilgi; değiştir önerisi üretmez. ${num(fq.full_confidence_months, 0)} ayı doldurunca tam puanla sıralanır.</p>`);
   if (pr.watch.length) {
-    parts.push(`<div class="label">İzlemede · ${num(fq.min_history_months, 0)} aydan kısa</div><div class="group">${pr.watch.map((x) => `<button class="row" data-act="go" data-kind="fon" data-code="${esc(x.code)}"><span class="l" style="flex:1"><b>${esc(x.code)}</b><small>${esc(peerName(funds[x.code]))} · ${num(x.months, 0)} ay · puanı ${num(fq.min_history_months, 0)} ayda başlar</small></span>${chev()}</button>`).join('')}</div>`);
+    parts.push(`<div class="label">İzlemede · ${num(fq.min_history_months, 0)} aydan kısa</div><div class="group">${pr.watch.map((x) => `<button class="row" data-act="go" data-kind="fon" data-code="${esc(x.code)}"><span class="l" style="flex:1"><b>${esc(x.code)}${x.allowed ? '' : ' <span class="tag">seçmediğin firma</span>'}</b><small>${esc(peerName(funds[x.code]))} · ${num(x.months, 0)} ay · puanı ${num(fq.min_history_months, 0)} ayda başlar</small></span>${chev()}</button>`).join('')}</div>`);
   }
   return parts.join('');
 }
@@ -665,6 +667,7 @@ function viewFon(m, code) {
   const passive = m.P.universe.passive_categories.includes(f.category);
   const mine = m.drift?.current?.[code];
   parts.push(`<div class="fid"><span class="ico" style="--c:var(${KIND_VAR[k]})">${svg(k, 30, 2)}</span><div><h1>${esc(code)}</h1><p>${esc(n.short)}${mine ? ` · sende %${num(mine, 1)}` : ''}</p></div></div>`);
+  if (f.allowed === false && f.halal) parts.push(`<p class="note"><span class="tag">seçmediğin firma</span> Sıra ve öneriler bu fonu dışarıda tutar.</p>`);
   if (!f.halal) parts.push(`<div class="banner"><span class="app-i warn">!</span><span><b>Helal dışı</b><span>${esc(f.halal_reason || '')}</span></span></div>`);
   if (f.flags.length) parts.push(`<p class="note">${f.flags.map((x) => `<span class="tag warn">${FLAG_LABELS[x]}</span>`).join(' ')}</p>`);
   const sig = mine && m.funds ? (m.funds.switches.find((x) => x.from === code) || m.funds.weak.find((x) => x.code === code)) : null;
@@ -676,7 +679,7 @@ function viewFon(m, code) {
   parts.push(`<div class="hero"><div class="k">Son 1 yıl</div><div class="v"><strong class="${(y1 ?? 0) < 0 ? 'neg' : 'pos'}">${pct(y1, 1, true)}</strong><span>${ex === null || ex === undefined ? '' : `${passive ? 'kıyasından' : 'içeriğinden'} ${num(Math.abs(ex), 1)} puan ${ex >= 0 ? 'fazla' : 'geride'}`}</span></div></div>`);
   const pr = (m.latest.prices_tail.prices[code] || []).filter((v) => v !== null);
   if (pr.length > 2) parts.push(`<div class="chart">${area(rangeSlice(pr, ui.frange), `var(${KIND_VAR[k]})`, 358, 140)}</div>${ranges('frange', ui.frange)}`);
-  parts.push(`<div class="stats"><button data-act="${f.score === null ? 'noop' : 'explain'}" data-key="score:${esc(code)}"><small>Puan</small><b>${f.score === null ? '—' : num(f.score, 0)}</b><span>${f.score === null ? (f.flags.includes('yeni_fon') ? 'yeni fon' : 'yok') : `${f.peers} fonda ${f.rank}.`}</span></button>
+  parts.push(`<div class="stats"><button data-act="${f.score === null ? 'noop' : 'explain'}" data-key="score:${esc(code)}"><small>Puan</small><b>${f.score === null ? '—' : num(f.score, 0)}</b><span>${f.score === null ? (f.flags.includes('yeni_fon') ? 'yeni fon' : 'yok') : f.rank ? `${f.peers} fonda ${f.rank}.` : `tüm BES’te ${f.rank_all}.`}</span></button>
     <div><small>Ücret</small><b>${pct(f.fee, 2)}</b><span>yıllık</span></div><div><small>Risk</small><b>${f.risk ?? '—'}/7</b><span>SPK</span></div></div>`);
   if (f.components) {
     const c = f.components;
@@ -802,8 +805,28 @@ function viewAyarlar(m) {
   return back(backLabel()) + title('Ayarlar') + `
     <div class="label">Yazı boyutu</div><div class="seg" style="margin-top:0">${[['m', 'Büyük'], ['l', 'Daha büyük'], ['xl', 'En büyük']].map(([k, l]) => `<button data-act="size" data-v="${k}" class="${p.size === k ? 'on' : ''}">${l}</button>`).join('')}</div>
     <div class="label">Görünüm</div><div class="seg" style="margin-top:0">${[['auto', 'Otomatik'], ['dark', 'Koyu'], ['light', 'Açık']].map(([k, l]) => `<button data-act="theme" data-v="${k}" class="${p.theme === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-    <div class="label">Model ve veri</div><div class="group">${link('bildirim', 'Bildirimler', p.notify ? 'açık' : 'kapalı')}${link('parametreler', 'Model ayarları', 'sürüm ' + m.param_version)}${link('capa', 'Çapa', state.anchor ? dateTr(state.anchor_date) : 'öneri')}${link('paylar', 'Sözleşme payları')}${link('yedek', 'Yedekle ve geri yükle')}${link('veri', 'Veri kaynakları', 'TEFAS')}</div>
+    <div class="label">Model ve veri</div><div class="group">${link('firmalar', 'Fon firmaları', state.founders?.length ? `${state.founders.length} firma` : 'hepsi')}${link('bildirim', 'Bildirimler', p.notify ? 'açık' : 'kapalı')}${link('parametreler', 'Model ayarları', 'sürüm ' + m.param_version)}${link('capa', 'Çapa', state.anchor ? dateTr(state.anchor_date) : 'öneri')}${link('paylar', 'Sözleşme payları')}${link('yedek', 'Yedekle ve geri yükle')}${link('veri', 'Veri kaynakları', 'TEFAS')}</div>
     <p class="note center" style="padding-top:1rem">Dağılımın yalnız bu telefonda saklanır.</p>`;
+}
+
+// Fon seçilecek firmalar: yalnız telefonda; sıra ve öneri bu firmaların fonlarından.
+function companies(m) {
+  const out = {};
+  for (const f of m.latest.funds) {
+    if (!f.halal || !f.founder) continue;
+    (out[f.founder] ||= { code: f.founder, name: fundNames(f.name).company || f.founder, n: 0 }).n++;
+  }
+  return Object.values(out).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+}
+
+function viewFirmalar(m) {
+  const list = companies(m);
+  const on = (c) => !state.founders?.length || state.founders.includes(c);
+  const parts = [back(backLabel()), title('Fon firmaları', state.founders?.length ? `${state.founders.length} / ${list.length} firma seçili` : `${list.length} firmanın hepsi`)];
+  parts.push(`<div style="height:.8rem"></div><div class="group">${list.map((c) => `<button class="row" data-act="founder-toggle" data-v="${esc(c.code)}"><span class="l"><b>${esc(c.name)}</b><small>${c.n} helal fon</small></span><span class="toggle${on(c.code) ? ' on' : ''}"></span></button>`).join('')}</div>`);
+  if (state.founders?.length) parts.push('<div class="btns"><button class="btn plain" data-act="founders-all">Hepsini seç</button></div>');
+  parts.push('<p class="note">Puan tüm BES’e göre kalır. Sıra, zayıf uyarısı, değiştir ve dengeleme önerisi yalnız seçtiğin firmaların fonlarından. Seçmediğin firmanın fonunu tutuyorsan, seçtiklerindeki aynı türün en iyisine geçiş önerilir. Seçim yalnız bu telefonda durur.</p>');
+  return parts.join('');
 }
 
 function viewParametreler(m) {
@@ -881,7 +904,7 @@ function render() {
   const views = {
     dagilim: () => viewDagilim(m), dengele: () => viewDengele(m), fonsinyal: () => viewFonSinyal(m), grup: () => viewGrup(m, p.id), fon: () => viewFon(m, p.code),
     sozlesme: () => viewSozlesme(m, p.id), yapistir: () => viewYapistir(m, p.id), paylar: () => viewPaylar(m), capa: () => viewCapa(m),
-    ayarlar: () => viewAyarlar(m), parametreler: () => viewParametreler(m), bildirim: () => viewBildirim(), yedek: () => viewYedek(), veri: () => viewVeri(m),
+    ayarlar: () => viewAyarlar(m), firmalar: () => viewFirmalar(m), parametreler: () => viewParametreler(m), bildirim: () => viewBildirim(), yedek: () => viewYedek(), veri: () => viewVeri(m),
   };
   const tabs = { ozet: () => viewOzet(m), sozlesmeler: () => viewSozlesmeler(m), fonlar: () => viewFonlar(m), sor: () => viewSor(m) };
   const html = p ? views[p.kind]() : tabs[ui.tab]();
@@ -1062,6 +1085,15 @@ root.addEventListener('click', async (e) => {
     return showToast(`Parametre sürümü ${paramVersion(DEFAULT_PARAMS, state.params)} kaydedildi.`);
   } else if (act === 'size' || act === 'theme') {
     state.prefs[act] = el.dataset.v; applyPrefs(); persist();
+  } else if (act === 'founder-toggle') {
+    const all = companies(compute(latest, state)).map((c) => c.code);
+    const cur = new Set(state.founders?.length ? state.founders : all);
+    if (cur.has(el.dataset.v)) cur.delete(el.dataset.v); else cur.add(el.dataset.v);
+    if (!cur.size) return showToast('En az bir firma seçili kalmalı.');
+    state.founders = cur.size === all.length ? null : all.filter((c) => cur.has(c));
+    persist();
+  } else if (act === 'founders-all') {
+    state.founders = null; persist();
   } else if (act === 'notify-toggle') {
     try { if (state.prefs.notify) await notifyOff(); else await notifyOn(); } catch (err) { showToast(`Bildirim açılamadı: ${err.message}`); }
     return;

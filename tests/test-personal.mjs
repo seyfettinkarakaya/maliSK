@@ -285,3 +285,27 @@ test('akran grubu: az fonlu kategori ailesiyle birleşir; değiştir aynı türe
   const loose = promisingFunds(latest, { ...P, fund_quality: { ...P.fund_quality, promising_top_n: 5 } });
   assert.deepEqual(loose.promising.map((x) => x.code), ['Y1', 'Y2']);
 });
+
+test('fon firmaları: sıra seçilen firmalarda, dışarıdaki fon için değiştir önerisi', async () => {
+  const { fundSignals, applyParams, restrictFounders, categoryLeaders } = await import('../src/app/personal.mjs');
+  const f = (code, founder, score) => ({
+    code, founder, category: 'gold', peer_group: 'gold', halal: true, main_class: 'gold', exposure: expo({ gold: 100 }),
+    score, raw_score: score, history_months: 60, flags: [],
+  });
+  const base = applyParams({ ...market(), funds: [f('A1', 'AAA', 90), f('B1', 'BBB', 80), f('B2', 'BBB', 70), f('C1', 'CCC', 60), f('B3', 'BBB', 50)] }, P);
+  // Seçim yok: hepsi, sıra tüm BES.
+  const all = restrictFounders(base, null);
+  assert.equal(all.founders_on, false);
+  assert.equal(all.funds.find((x) => x.code === 'B3').rank, 5);
+  // Yalnız BBB: B3 seçtiklerinde 3. (ilk 3'te, iyi); tüm BES'te 5.
+  const lt = restrictFounders(base, ['BBB']);
+  const b3 = lt.funds.find((x) => x.code === 'B3');
+  assert.deepEqual([b3.rank, b3.peers, b3.rank_all], [3, 3, 5]);
+  assert.equal(lt.funds.find((x) => x.code === 'A1').rank, null);
+  assert.deepEqual(categoryLeaders(lt, P).gold.map((x) => x.code), ['B1', 'B2', 'B3']);
+  const s = fundSignals(lt, { B3: 50, A1: 30, C1: 20 }, P);
+  assert.ok(s.good.some((x) => x.code === 'B3'));
+  // A1 puanı yüksek ama seçilmeyen firma: yine de seçtiklerindeki en iyiye (B1) geçiş önerilir.
+  assert.deepEqual(s.switches.map((x) => [x.from, x.to, !!x.outside]).sort(), [['A1', 'B1', true], ['C1', 'B1', true]]);
+  assert.deepEqual(s.outside.map((x) => x.code).sort(), ['A1', 'C1']);
+});

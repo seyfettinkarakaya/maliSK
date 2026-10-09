@@ -1,4 +1,4 @@
-# maliSK modeli — sürüm 2.5
+# maliSK modeli — sürüm 2.6
 
 **Tarih:** 9 Ekim 2026 · **Sahibi:** Seyfettin · Kaynak: BES Fon Danışmanı spesifikasyonu 2.0
 ve 7–8 Ekim 2026 tarihli model görüşmelerindeki kararlar (en altta değişiklik günlüğü).
@@ -178,6 +178,11 @@ puanlanmaz, en çok %5 ağırlık alır.
 - **Riskli fon:** tutulan fon helal dışına çıkarsa "çık, yerine aynı türün en iyisi" (beklemesiz, "şimdi
   değil"den etkilenmez); dönüşüm, strateji kayması ya da şüpheli veride uyarı.
 - **Yeni fon:** puanı olmayan fon sıralanmaz, önerilmez; tutuluyorsa bilgi verilir.
+- **Fon firmaları (kullanıcı ayarı, yalnız telefonda):** kullanıcı fon seçeceği firmaları belirler
+  (varsayılan hepsi). Puan tüm BES'e göre kalır; sıra, zayıf, değiştir ve öneri adayları yalnız seçilen
+  firmaların fonları arasındadır. Seçilmeyen firmanın tutulan fonu için, puan farkına bakılmadan,
+  seçilen firmalardaki aynı türün en iyisine geçiş önerilir (normal öneri, "şimdi değil"le ertelenir).
+  Fon listeleri ve ümit vaat edenler hepsini gösterir, seçilmeyenler işaretli.
 - **Ümit vaat eden (yalnız bilgi):** geçmişi 12–36 ay arasında, riskli bayrağı olmayan, kullanıcının
   seçebileceği fonlardan ham puanı (kısa geçmiş düzeltmesinden önce) akran grubunda ilk 3'te
   (`promising_top_n`) ya da 70 ve üstünde (`promising_min_raw`) olanlar ayrı listede gösterilir.
@@ -238,6 +243,11 @@ Ek A'daki 8 fonla, yılbaşı = 9 ay:
   fazla getiri.
 - Hak sayacı, Google Sheet, TL tutar ve XIRR ilk sürümden çıkarıldı. Ledoit-Wolf kapalı (Ö2).
 - Çapada olmayan sınıf izlenir (kullanıcı onayladı, 8 Ekim 2026).
+
+### 2.5 → 2.6 (9 Ekim 2026, kullanıcı onayı)
+
+- Fon firmaları ayarı: sıra ve öneri seçilen firmaların fonlarından; seçilmeyen firmanın fonu için
+  geçiş önerisi.
 
 ### 2.4 → 2.5 (9 Ekim 2026, kullanıcı onayı)
 

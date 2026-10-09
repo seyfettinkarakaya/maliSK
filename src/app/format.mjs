@@ -54,7 +54,10 @@ export function fundNames(name) {
   let short = i > 0 ? raw.slice(i + 4) : raw;
   short = short.replace(/EMEKLİLİK YATIRIM FONU\s*$/u, '').replace(/\bEYF\s*$/u, '').trim();
   const comp = company.replace(/\b(HAYAT|YAŞAM|SİGORTA|VE|EMEKLİLİK)\b/gu, ' ').replace(/\s+/g, ' ').trim();
-  return { short: titleTr(short || raw), company: titleTr(comp || company) };
+  // Yabancı adlar ve kısaltmalar Türkçe büyük-küçük harf kuralına uymaz.
+  const fix = { Allıanz: 'Allianz', Hdı: 'HDI', Qnb: 'QNB', Bnp: 'BNP', Axa: 'AXA', Nn: 'NN' };
+  const companyTr = titleTr(comp || company).split(' ').map((w) => fix[w] || w).join(' ');
+  return { short: titleTr(short || raw), company: companyTr };
 }
 
 export const FLAG_LABELS = {

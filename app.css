@@ -212,3 +212,4 @@ input[type="range"].split::-moz-range-track { height: .7rem; border-radius: .35r
 .toast { position: fixed; left: 1rem; right: 1rem; bottom: calc(var(--safe-bottom) + 5.2rem); z-index: 30; background: var(--tx); color: var(--bg); border-radius: .85rem; padding: .75rem .9rem; font-size: 1rem; font-weight: 800; text-align: center; }
 .empty { text-align: center; color: var(--tx2); padding: 3rem 1rem; font-size: 1.05rem; font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.row.dim { opacity: .5; }

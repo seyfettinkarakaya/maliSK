@@ -10,6 +10,7 @@ export const EMPTY_STATE = {
   anchor: null, // { groups, splits } — çapa ağacı
   anchor_date: null,
   views: {}, // { sınıf: −1 | 0 | 1 } — K
+  founders: null, // fon seçilecek firmalar (kurucu kodları); null = hepsi
   decisions: [], // { date, action: 'uygulandi' | 'reddedildi', weights? }
   checklist: null, // { key, done: ['no:kod'] } — Dengele adımları
   params: { n: 0, date: null, values: {} }, // kullanıcı parametreleri (sürüm n)
