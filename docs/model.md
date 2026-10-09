@@ -1,6 +1,6 @@
-# maliSK modeli — sürüm 2.3
+# maliSK modeli — sürüm 2.4
 
-**Tarih:** 8 Ekim 2026 · **Sahibi:** Seyfettin · Kaynak: BES Fon Danışmanı spesifikasyonu 2.0
+**Tarih:** 9 Ekim 2026 · **Sahibi:** Seyfettin · Kaynak: BES Fon Danışmanı spesifikasyonu 2.0
 ve 7–8 Ekim 2026 tarihli model görüşmelerindeki kararlar (en altta değişiklik günlüğü).
 
 Formüller modelin kendisidir; değiştirmeden önce kullanıcıya sorulur. Tüm sayısal değerler
@@ -152,11 +152,36 @@ puanlanmaz, en çok %5 ağırlık alır.
   hedefinin %25'i, en az 3, en çok 10 puan; alt sınır 0'ın altına inmez.
 - **Grup içi pay bandı:** sınıfın grup içindeki payı `maruziyet_c / maruziyet_g × 100`; bant = hedef
   pay ± 10 puan (0–100 arası). Grup portföyün %5'inden küçükse pay denetlenmez.
-- **Sayaç:** her grup ve her grup içi pay için ayrı; bant dışında her iş günü +1, içeri dönünce 0.
-- **Öneri:** bir sayaç 20 iş gününe ulaşınca. Grubu ve grup içi payı bant içindeki sınıfların fonları sabit kalır;
-  mevcut fon, aynı kategorideki adayla ancak puan farkı ≥ 20 ise değiştirilir.
-- **Durumlar:** aktif → kullanıcı "uygulandı" (yeni dağılımı girer, sayaçlar sıfırlanır) veya
-  "reddedildi" (sayaçlar sıfırlanır, aynı öneri 20 iş günü tekrarlanmaz).
+- **Sayaç (geçmişten sayma):** her grup ve her grup içi pay için ayrı; bant dışında her iş günü +1, içeri
+  dönünce 0. Sayaç, bugünkü fonların son 130 iş gününde de tutulduğu varsayılarak hesaplanır
+  (`w_t ∝ w_bugün · P_t / P_bugün`); dağılım bugün girilse de sapmanın süresi bilinir.
+
+### 8.1 Dağılım sinyali
+
+- **Anında öneri:** grubun sapması `|x − h| ≥ k · genişlik` (k = 2) ya da `≥ P` puan (P = 0 kapalı);
+  grup içi payda `|x − h| ≥ k · 10`. Teyit beklenmez.
+- **Teyitli öneri:** sayaç teyit süresine (20 iş günü) ulaşınca. Arada ekranda "takipte · n iş günü kaldı"
+  yazar; öneri önizlemesi her zaman açılabilir.
+
+### 8.2 Fon sinyali (aralıktan ve şirketten bağımsız; tüm BES evreni)
+
+- **Sıra:** fon, kendi kategorisindeki helal ve puanlı fonlar arasında puana göre sıralanır.
+- **Zayıf:** kategorisinde ilk N'de (N = 3) olmayan fon için hemen uyarı; ilk N fon gösterilir.
+- **Değiştir:** zayıf fonun puanı kategorinin 1.'sinden ≥ 10 puan düşükse "X yerine 1." önerilir; pay
+  olduğu gibi geçer. Lider adayı: helal, puanlı, riskli bayrağı (helal uyarısı, dönüşüm, strateji kayması,
+  şüpheli veri) olmayan, kullanıcının seçebileceği fon.
+- **Riskli fon:** tutulan fon helal dışına çıkarsa "çık, yerine kategorinin 1.'si" (beklemesiz, "şimdi
+  değil"den etkilenmez); dönüşüm, strateji kayması ya da şüpheli veride uyarı.
+- **Yeni fon:** puanı olmayan fon sıralanmaz, önerilmez; tutuluyorsa bilgi verilir.
+
+### 8.3 Öneri
+
+- Önce fon değişiklikleri, sonra dağılım sinyali varsa yeniden dağıtım. Aralık içindeki grupların fonları
+  sabit; adaylar mevcut fonlar ve aralık dışındaki sınıflarda, içinde fon tutulmayan her kategorinin 1.'si
+  (tutulan fonun yerine geçmek yalnız fon sinyaliyle, eşik farkı aşılınca olur). Amaç fonksiyonu
+  Bölüm 7'deki gibi (ücret terimi TEFAS ücretiyle).
+- **Durumlar:** "uygulandı" (tüm sözleşmeler yeni dağılımla kaydedilir, sayaçlar sıfırlanır) veya
+  "şimdi değil" (aynı tür öneri 20 iş günü gelmez; riskli fon önerileri hariç).
 - **Hedefe uzaklık:** `Σ_g max(0, maruziyet_g − hedef_g)`, yönetilen gruplar üzerinden. Dengelemek için
   toplam birikimin yaklaşık bu kadar puanının başka fonlara taşınması gerekir.
 - **Sözleşmeler:** kullanıcının birden çok BES sözleşmesi olabilir; her biri numarasıyla ayrı girilir
@@ -164,7 +189,7 @@ puanlanmaz, en çok %5 ağırlık alır.
   her sözleşme kendi fon fiyatlarıyla kayar ve paylar `pay_c(t) ∝ pay_c(t₀) · V_c(t) / V_c(t₀)` ile güncellenir.
   Toplam fon ağırlığı `Σ_c pay_c(t) · w_(c,f)(t)`. Bant, sayaç ve öneri **toplam** üzerinden hesaplanır;
   öneri tek bir fon dağılımıdır ve tüm sözleşmelere aynı oranlarla uygulanır (karar b, 8 Ekim 2026).
-  Önerilen fonun kurucusu sözleşmedeki fonlarınkinden farklıysa uyarı gösterilir.
+  Fon evreni tüm BES fonlarıdır; öneri şirketten bağımsızdır.
 - **Acil uyarı:** sınıfın 20 iş günlük düşüşü `2,5 · σ_yıllık · √(20 / 252)` eşiğini aşarsa.
   İnceleme çağrısıdır, dağılım önerisi değildir.
 
@@ -204,6 +229,13 @@ Ek A'daki 8 fonla, yılbaşı = 9 ay:
   fazla getiri.
 - Hak sayacı, Google Sheet, TL tutar ve XIRR ilk sürümden çıkarıldı. Ledoit-Wolf kapalı (Ö2).
 - Çapada olmayan sınıf izlenir (kullanıcı onayladı, 8 Ekim 2026).
+
+### 2.3 → 2.4 (9 Ekim 2026, kullanıcı onayı)
+
+- Geçmişten sayma; anında öneri (aralığın k katı ya da P puan); "şimdi değil" bekleme süresi ayrı parametre.
+- Fon sinyali: kategorisinde ilk N'de olmayan fon için uyarı; 1.'den ≥ eşik geride ise değiştir önerisi;
+  riskli fon uyarısı. Aralıktan ve şirketten bağımsız, tüm BES evreni.
+- Fon değiştirme eşiği varsayılanı 20 → 10 puan; öneride ücret terimi etkin.
 
 ### 2.2 → 2.3 (8 Ekim 2026, kullanıcı onayı)
 

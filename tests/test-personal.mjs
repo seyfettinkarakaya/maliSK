@@ -179,8 +179,69 @@ test('çekirdek: sözleşmeli durum, öneri ve günlük bildirim metni', async (
   assert.equal(m.steps.length, 1);
   const n = dailyNotice(m, GROUP_LABELS, CLASS_LABELS);
   assert.equal(n.title, 'Dengeleme zamanı');
-  assert.match(n.body, /^Kıymetli maden fazla, TL sabit eksik\. 1 sözleşmede \d+ değişiklik\.$/);
+  assert.match(n.body, /^dağılım: Kıymetli maden fazla, TL sabit eksik\. Toplam \d+ adım\.$/);
   // Eski tek dağılım da çalışır.
   const old = compute(latest, { allocation: { date: '2026-09-01', weights: { GLD: 80, MMF: 20 } }, anchor: { gold: 50, tl_fixed: 50 } });
   assert.ok(Math.abs(old.drift.current.GLD - m.drift.current.GLD) < 1e-9);
+});
+
+// ---------- 2.4: öneri ve uyarı kuralları ----------
+function market2() {
+  const latest = market();
+  const add = (code, category, e, score, flags = []) => {
+    latest.funds.push({ code, name: code, category, halal: !flags.includes('helal_uyarisi'), main_class: Object.keys(e)[0], exposure: expo(e), score, rank: null, peers: null, flags, fee: 1 });
+    latest.prices_tail.prices[code] = latest.prices_tail.dates.map(() => 1);
+  };
+  add('GL3', 'gold', { gold: 100 }, 70);
+  add('GL4', 'gold', { gold: 100 }, 40);
+  add('GL5', 'gold', { gold: 100 }, 65);
+  add('BAD', 'gold', { gold: 100 }, 90, ['helal_uyarisi']);
+  return latest;
+}
+
+test('geçmişten sayma: bugün girilen dağılımda sayaç geçmişi kapsar', async () => {
+  const { compute } = await import('../src/app/engine.mjs');
+  const latest = market();
+  latest.classes.gold = { trend: { T: 0 } };
+  latest.prices_tail.prices.GLD = latest.prices_tail.dates.map(() => 1);
+  const st = { contracts: [{ no: '1', date: '2026-09-30', weights: { GLD: 75, MMF: 25 } }], shares: { date: '2026-09-30', values: { 1: 100 } }, anchor: { gold: 50, tl_fixed: 50 } };
+  const m = compute(latest, st);
+  assert.equal(m.bands.counters['group:precious_metals'], 30);
+  assert.equal(m.due.active, true);
+});
+
+test('anında öneri: aralığın katı ve puan eşiği', async () => {
+  const { recommendationDue } = await import('../src/app/personal.mjs');
+  const bands = { groups: { precious_metals: { value: 50, target: 35, width: 8.75, status: 'above' }, equity: { value: 22, target: 30, width: 7.5, status: 'below' } }, splits: {}, counters: { 'group:precious_metals': 2, 'group:equity': 3 } };
+  const r = recommendationDue(bands, [], '2026-09-30', P);
+  assert.deepEqual(r.immediate, []); // 15 < 2 × 8,75; 8 < 2 × 7,5
+  assert.equal(r.active, false);
+  assert.deepEqual(r.pending.map((x) => x.left), [18, 17]);
+  const p5 = { ...P, decision: { ...P.decision, immediate_pts: 5 } };
+  assert.deepEqual(recommendationDue(bands, [], '2026-09-30', p5).immediate, ['group:precious_metals', 'group:equity']);
+  const k15 = { ...P, decision: { ...P.decision, immediate_band_mult: 1.5 } };
+  assert.deepEqual(recommendationDue(bands, [], '2026-09-30', k15).immediate, ['group:precious_metals']);
+  // "Şimdi değil" bekleme süresi.
+  const sn = recommendationDue(bands, [{ date: '2026-09-25', action: 'reddedildi' }], '2026-09-30', p5);
+  assert.equal(sn.suppressed, true);
+  assert.equal(sn.active, false);
+});
+
+test('fon sinyali: zayıf, değiştir, riskli; öneri yalnız fon değişikliği', async () => {
+  const { fundSignals, applyParams, buildProposal } = await import('../src/app/personal.mjs');
+  const latest = applyParams(market2(), P);
+  // Altın sıralaması (riskli BAD hariç sıralamada var ama lider olamaz): BAD 90 riskli → liderler GL2 80, GL3 70, GL5 65, GLD 55, GL4 40.
+  const s = fundSignals(latest, { GLD: 30, GL4: 20, GL3: 10, BAD: 10, MMF: 30 }, P);
+  assert.deepEqual(s.weak.map((x) => x.code).sort(), ['GL4', 'GLD']);
+  assert.deepEqual(s.switches.map((x) => [x.from, x.to]).sort(), [['BAD', 'GL2'], ['GL4', 'GL2'], ['GLD', 'GL2']]);
+  assert.equal(s.switches.find((x) => x.from === 'BAD').risk, true);
+  assert.ok(s.risks.some((x) => x.code === 'BAD' && x.kind === 'helal'));
+  assert.ok(s.good.some((x) => x.code === 'GL3'));
+  // Eşik 30 puan: GLD (25 geride) yalnız uyarı kalır, GL4 (40 geride) değiştirilir.
+  const s30 = fundSignals(latest, { GLD: 30, GL4: 20, MMF: 50 }, { ...P, decision: { ...P.decision, switch_score_gap: 30 } });
+  assert.deepEqual(s30.switches.map((x) => x.from), ['GL4']);
+  assert.deepEqual(s30.weak.map((x) => x.code).sort(), ['GL4', 'GLD']);
+  // Yalnız fon değişikliği: pay olduğu gibi geçer.
+  const p = buildProposal(latest, { GLD: 30, GL4: 20, MMF: 50 }, { class_out: {}, exposure: {} }, { gold: 50, tl_fixed: 50 }, P, { switches: s30.switches, rebalance: false });
+  assert.deepEqual(p.weights, { GLD: 30, MMF: 50, GL2: 20 });
 });

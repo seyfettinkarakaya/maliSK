@@ -136,18 +136,14 @@ export function migrateState(state) {
   return { ...state, contracts: [{ no: '1', date: state.allocation.date, weights: state.allocation.weights }], shares: { date: state.allocation.date, values: { 1: 100 } } };
 }
 
-// Öneri tüm sözleşmelere aynı oranlarla uygulanır (karar b). Her sözleşme için mevcut → yeni adımlar ve
-// önerilen fon sözleşmenin şirketinde yoksa uyarı (fon kurucusu farklıysa).
+// Öneri tüm sözleşmelere aynı oranlarla uygulanır (karar b). Her sözleşme için mevcut → yeni adımlar.
 export function contractSteps(latest, combined, proposalWeights) {
-  const funds = fundIndex(latest);
   return Object.entries(combined.contracts).map(([no, d]) => {
-    const founders = [...new Set(Object.keys(d.current).map((c) => funds[c]?.founder).filter(Boolean))];
     const codes = [...new Set([...Object.keys(d.current), ...Object.keys(proposalWeights)])];
     const steps = codes.map((code) => ({ code, from: d.current[code] ?? 0, to: proposalWeights[code] ?? 0 }))
       .filter((x) => Math.round(x.from) !== x.to).sort((a, b) => (a.to - a.from) - (b.to - b.from));
     const keep = codes.filter((code) => Math.round(d.current[code] ?? 0) === (proposalWeights[code] ?? 0) && proposalWeights[code]);
-    const foreign = Object.keys(proposalWeights).filter((c) => founders.length === 1 && funds[c]?.founder && funds[c].founder !== founders[0]);
-    return { no, share: combined.shares_now[no], steps, keep, foreign };
+    return { no, share: combined.shares_now[no], steps, keep };
   });
 }
 
@@ -186,13 +182,33 @@ export function currentExposure(latest, weights) {
   return portfolioExposure(weights, exposures);
 }
 
+// Geçmişten sayma (docs/model.md, Bölüm 8): bugünkü fonların geçmişte de tutulduğu varsayılır (pay adedi sabit).
+// w_t ∝ w_bugün × P_t / P_bugün. Fiyatı olmayan gün için fonun ilk bilinen fiyatı kullanılır.
+export function backfillWeights(latest, current) {
+  const { dates, prices } = latest.prices_tail;
+  const codes = Object.keys(current).filter((c) => current[c] > 0);
+  const series = {};
+  for (const c of codes) {
+    const p = prices[c] || [];
+    const first = p.find((v) => v !== null && v !== undefined) ?? 1;
+    let lastSeen = first;
+    series[c] = dates.map((_, i) => { if (p[i] !== null && p[i] !== undefined) lastSeen = p[i]; return lastSeen; });
+  }
+  const n = dates.length - 1;
+  return dates.map((date, i) => {
+    const raw = Object.fromEntries(codes.map((c) => [c, current[c] * (series[c][i] / series[c][n])]));
+    const tot = Object.values(raw).reduce((x, y) => x + y, 0) || 1;
+    return { date, weights: Object.fromEntries(codes.map((c) => [c, (raw[c] * 100) / tot])) };
+  });
+}
+
 // Her gün için maruziyet ve iki düzeyli bant durumu. Sayaçlar ('group:<grup>', 'split:<grup>') =
 // sondan geriye kesintisiz bant dışı gün sayısı. Geçmiş günler bugünün hedefiyle değerlendirilir.
 export function bandHistory(latest, drift, targets, params) {
   const funds = fundIndex(latest);
   const tree = params.anchor.tree;
   const exposures = Object.fromEntries(Object.keys(drift.current).map((c) => [c, funds[c]?.exposure]).filter(([, e]) => e));
-  const days = drift.series.map((s) => {
+  const days = backfillWeights(latest, drift.current).map((s) => {
     const exposure = portfolioExposure(s.weights, exposures);
     return { date: s.date, exposure, check: treeBandCheck(tree, targets.anchor, exposure, targets.group_targets, params.decision) };
   });
@@ -212,7 +228,7 @@ export function bandHistory(latest, drift, targets, params) {
   return { exposure: today.exposure, ...today.check, counters, history, distance, days_observed: days.length };
 }
 
-function businessDaysBetween(a, b) {
+export function businessDaysBetween(a, b) {
   let n = 0;
   for (let d = Date.parse(a + 'T00:00:00Z') + 86400000; d <= Date.parse(b + 'T00:00:00Z'); d += 86400000) {
     const wd = new Date(d).getUTCDay();
@@ -221,63 +237,116 @@ function businessDaysBetween(a, b) {
   return n;
 }
 
-// Öneri koşulu: bir grubun ya da grup içi payın sayacı teyit süresine ulaştı ve son 20 iş gününde reddedilmiş öneri yok.
+// Dağılım sinyali: anında (sapma ≥ k × aralık ya da ≥ P puan) veya teyitli (sayaç ≥ teyit süresi).
+// "Şimdi değil" denince snooze_days iş günü öneri gelmez.
 export function recommendationDue(bands, decisions, today, params) {
-  const due = Object.entries(bands.counters).filter(([, n]) => n >= params.decision.confirm_days).map(([c]) => c);
-  const lastReject = decisions.filter((d) => d.action === 'reddedildi').map((d) => d.date).sort().pop();
-  const suppressed = lastReject && businessDaysBetween(lastReject, today) < params.decision.confirm_days;
-  return { due, suppressed: !!suppressed, active: due.length > 0 && !suppressed };
+  const d = params.decision;
+  const immediate = [];
+  for (const [g, b] of Object.entries(bands.groups || {})) {
+    const dev = Math.abs(b.value - b.target);
+    if (b.status !== 'inside' && (dev >= d.immediate_band_mult * b.width || (d.immediate_pts > 0 && dev >= d.immediate_pts))) immediate.push('group:' + g);
+  }
+  for (const [g, sp] of Object.entries(bands.splits || {})) {
+    if (Object.values(sp).some((x) => x.status !== 'inside' && Math.abs(x.value - x.target) >= d.immediate_band_mult * d.split_band_pts)) immediate.push('split:' + g);
+  }
+  const confirmed = Object.entries(bands.counters).filter(([, n]) => n >= d.confirm_days).map(([c]) => c);
+  const due = [...new Set([...immediate, ...confirmed])];
+  const pending = Object.entries(bands.counters).filter(([k, n]) => n > 0 && !due.includes(k)).map(([key, n]) => ({ key, days: n, left: d.confirm_days - n }));
+  const lastReject = decisions.filter((x) => x.action === 'reddedildi').map((x) => x.date).sort().pop();
+  const suppressed = !!lastReject && businessDaysBetween(lastReject, today) < d.snooze_days;
+  return { due, immediate, pending, suppressed, active: due.length > 0 && !suppressed };
 }
 
-// Eylem önerisi: ana sınıfı (grubu ve grup içi payı) bant içindeki fonlar sabit; aynı kategorideki aday ancak puanı ≥ 20 yüksekse değiştirir.
-export function buildProposal(latest, current, bands, targets, params) {
-  const funds = fundIndex(latest);
-  const gap = params.decision.switch_score_gap;
-  const best = {};
+const RISK_FLAGS = ['helal_uyarisi', 'donusum', 'strateji_kaymasi', 'supheli_veri'];
+
+// Kategorinin en iyisi: helal, puanlı, riskli bayrağı olmayan, kullanıcının seçebileceği fon.
+export function categoryLeaders(latest, params) {
+  const out = {};
   for (const f of latest.funds) {
     if (!f.halal || f.score === null || f.category === 'unclassified' || params.allocation.excluded_categories.includes(f.category)) continue;
-    if (!best[f.category] || f.score > best[f.category].score) best[f.category] = f;
+    if (f.flags.some((x) => RISK_FLAGS.includes(x))) continue;
+    (out[f.category] ||= []).push(f);
   }
+  for (const l of Object.values(out)) l.sort((a, b) => b.score - a.score);
+  return out;
+}
+
+// Fon sinyali (docs/model.md, Bölüm 8): tüm BES evreninde kendi kategorisine göre; aralıktan ve şirketten bağımsız.
+export function fundSignals(latest, current, params) {
+  const d = params.decision;
+  const funds = fundIndex(latest);
+  const leaders = categoryLeaders(latest, params);
+  const out = { switches: [], weak: [], risks: [], fresh: [], good: [] };
+  for (const [code, w] of Object.entries(current)) {
+    if (w <= 0) continue;
+    const f = funds[code];
+    if (!f) { out.risks.push({ code, weight: w, kind: 'veride_yok', text: 'veride bulunamadı' }); continue; }
+    const top = (leaders[f.category] || []).filter((x) => x.code !== code);
+    const best = top[0] || null;
+    const flags = f.flags.filter((x) => RISK_FLAGS.includes(x));
+    if (!f.halal || flags.includes('helal_uyarisi')) {
+      out.risks.push({ code, weight: w, kind: 'helal', text: f.halal_reason || 'helal dışı' });
+      if (best) out.switches.push({ from: code, to: best.code, weight: w, reason: `helal dışı; yerine kategorisinin 1.’si ${best.code} (${Math.round(best.score)})`, risk: true });
+      continue;
+    }
+    for (const x of flags) out.risks.push({ code, weight: w, kind: x, text: { donusum: 'strateji değişti', strateji_kaymasi: 'stratejisi kaydı', supheli_veri: 'verisi şüpheli' }[x] });
+    if (f.score === null) { out.fresh.push({ code, weight: w }); continue; }
+    const rank = f.rank ?? null;
+    const lead = leaders[f.category] || [];
+    if (rank !== null && rank <= d.fund_top_n) { out.good.push({ code, rank, peers: f.peers }); continue; }
+    const top3 = lead.slice(0, d.fund_top_n).map((x) => ({ code: x.code, score: x.score }));
+    out.weak.push({ code, weight: w, rank, peers: f.peers, score: f.score, top: top3 });
+    if (best && best.score - f.score >= d.switch_score_gap) {
+      out.switches.push({ from: code, to: best.code, weight: w, gap: best.score - f.score, reason: `kategorisinde ${rank}.; 1. ${best.code} ${Math.round(best.score)}, fark ${Math.round(best.score - f.score)} puan` });
+    }
+  }
+  return out;
+}
+
+// Eylem önerisi (docs/model.md, Bölüm 8): önce fon değişiklikleri (pay olduğu gibi yeni fona geçer), sonra dağılım
+// sinyali varsa yeniden dağıtım. Aralık içindeki grupların fonları sabit; adaylar elindeki fonlar ve her kategorinin 1.'si.
+export function buildProposal(latest, currentIn, bands, targets, params, { switches = [], rebalance = true } = {}) {
+  const funds = fundIndex(latest);
+  const current = { ...currentIn };
+  for (const s of switches) {
+    const w = current[s.from] || 0;
+    delete current[s.from];
+    current[s.to] = (current[s.to] || 0) + w;
+  }
+  const leaders = categoryLeaders(latest, params);
   const bounds = {};
   const notes = [];
   const candidates = new Set();
+  const swapped = new Set(switches.map((s) => s.to));
   for (const [code, w] of Object.entries(current)) {
     const f = funds[code];
     candidates.add(code);
-    if (!f || !bands.class_out[f.main_class]) {
+    if (!rebalance || !f || !bands.class_out[f.main_class]) {
       bounds[code] = [w, w];
-      notes.push({ code, kind: 'sabit', text: f ? 'ana sınıfı bant içinde' : 'veride yok' });
+      notes.push({ code, kind: 'sabit', text: !rebalance ? 'yalnız fon değişikliği' : f ? 'ana sınıfı aralık içinde' : 'veride yok' });
     } else if (f.flags.includes('yeni_fon')) {
       bounds[code] = [0, Math.min(w, params.fund_quality.new_fund_cap_pct)];
     }
   }
-  for (const [cat, b] of Object.entries(best)) {
-    if (candidates.has(b.code)) continue;
-    const mine = Object.keys(current).map((c) => funds[c]).filter((f) => f && f.category === cat && f.score !== null);
-    const blocking = mine.find((f) => b.score - f.score < gap);
-    if (blocking) {
-      notes.push({ code: b.code, kind: 'aday_degil', text: `${blocking.code} ile puan farkı ${(b.score - blocking.score).toFixed(0)} (< ${gap})` });
-      continue;
+  // Kategorisinde zaten tutulan fon varsa 1.'si eklenmez: fon değişikliği yalnız fon sinyaliyle (eşik farkı) olur.
+  const heldCats = new Set(Object.keys(current).map((c) => funds[c]?.category).filter(Boolean));
+  if (rebalance) {
+    for (const list of Object.values(leaders)) {
+      const b = list[0];
+      if (!b || candidates.has(b.code) || heldCats.has(b.category) || !bands.class_out[b.main_class]) continue;
+      candidates.add(b.code);
     }
-    candidates.add(b.code);
-    if (b.flags.includes('yeni_fon')) bounds[b.code] = [0, params.fund_quality.new_fund_cap_pct];
   }
   const list = [...candidates];
   const exposures = Object.fromEntries(list.map((c) => [c, funds[c]?.exposure || Object.fromEntries(CLASSES.map((k) => [k, 0]))]));
-  // İzlenen (çapada olmayan) sınıflar mevcut paylarında tutulur.
+  const fees = Object.fromEntries(list.map((c) => [c, funds[c]?.fee ?? 0]));
   const unmanaged = ANCHOR_CLASSES.filter((c) => !(c in targets));
   const fullTargets = { ...Object.fromEntries(CLASSES.map((c) => [c, 0])), ...Object.fromEntries(unmanaged.map((c) => [c, bands.exposure[c] || 0])), ...targets };
-  const opt = optimizeAllocation({ candidates: list, exposures, targets: fullTargets, fees: {}, bounds, lambda: params.allocation.fee_lambda });
+  const opt = optimizeAllocation({ candidates: list, exposures, targets: fullTargets, fees, bounds, lambda: params.allocation.fee_lambda });
   const weights = roundLargestRemainder(opt.weights);
   const exposure = portfolioExposure(weights, exposures);
-  const changes = [...new Set([...Object.keys(current), ...Object.keys(weights)])]
-    .map((code) => ({ code, from: current[code] ?? 0, to: weights[code] ?? 0 }))
+  const changes = [...new Set([...Object.keys(currentIn), ...Object.keys(weights)])]
+    .map((code) => ({ code, from: currentIn[code] ?? 0, to: weights[code] ?? 0 }))
     .sort((a, b) => b.to - a.to || b.from - a.from);
-  return {
-    weights,
-    exposure,
-    changes,
-    notes,
-    gaps: noInstrumentGaps(exposure, targets, params.allocation.no_instrument_pts),
-  };
+  return { weights, exposure, changes, notes, switches, swapped: [...swapped], rebalance, gaps: noInstrumentGaps(exposure, targets, params.allocation.no_instrument_pts) };
 }

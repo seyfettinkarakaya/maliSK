@@ -194,7 +194,14 @@ export const DEFAULT_PARAMS = {
     band_min_pts: 3,
     band_max_pts: 10,
     confirm_days: 20,
-    switch_score_gap: 20,
+    // Anında öneri: sapma aralık genişliğinin bu katını ya da (0 değilse) bu kadar puanı aşarsa teyit beklenmez.
+    immediate_band_mult: 2,
+    immediate_pts: 0,
+    // "Şimdi değil" denince aynı tür öneri bu kadar iş günü tekrar gelmez (riskli fon uyarıları hariç).
+    snooze_days: 20,
+    // Fon sinyali: kategorisinde ilk N'de olmayan fon zayıf; 1.'den bu kadar puan gerideyse değiştir önerilir.
+    fund_top_n: 3,
+    switch_score_gap: 10,
     alert_sigma_mult: 2.5,
     alert_window_days: 20,
     // Grup içi pay bandı: sınıfın grup içindeki payı hedef paydan bu kadar puan saparsa bant dışı.
@@ -213,7 +220,11 @@ export const PARAM_META = [
   { key: 'decision.split_band_pts', group: 'Aralık', label: 'Grup içi pay aralığı', unit: 'puan', min: 2, max: 30, step: 1 },
   { key: 'decision.split_min_group_pct', group: 'Aralık', label: 'Grup içi pay denetimi için en küçük grup', unit: '%', min: 0, max: 20, step: 1 },
   { key: 'decision.confirm_days', group: 'Öneri', label: 'Teyit süresi', unit: 'iş günü', min: 1, max: 60, step: 1 },
-  { key: 'decision.switch_score_gap', group: 'Öneri', label: 'Fon değiştirmek için puan farkı', unit: 'puan', min: 0, max: 50, step: 1 },
+  { key: 'decision.immediate_band_mult', group: 'Öneri', label: 'Anında öneri: aralığın katı', unit: '×', min: 1, max: 5, step: 0.25 },
+  { key: 'decision.immediate_pts', group: 'Öneri', label: 'Anında öneri: sapma puanı (0 = kapalı)', unit: 'puan', min: 0, max: 30, step: 0.5 },
+  { key: 'decision.snooze_days', group: 'Öneri', label: '“Şimdi değil” sonrası bekleme', unit: 'iş günü', min: 1, max: 60, step: 1 },
+  { key: 'decision.fund_top_n', group: 'Fon sinyali', label: 'Zayıf: kategorisinde ilk kaçta değilse', unit: 'sıra', min: 1, max: 10, step: 1 },
+  { key: 'decision.switch_score_gap', group: 'Fon sinyali', label: 'Değiştir: 1.’den puan farkı', unit: 'puan', min: 0, max: 50, step: 1 },
   { key: 'fund_quality.new_fund_cap_pct', group: 'Öneri', label: 'Yeni fon tavanı', unit: '%', min: 0, max: 20, step: 1 },
   { key: 'allocation.no_instrument_pts', group: 'Öneri', label: '“Uygun araç yok” eşiği', unit: 'puan', min: 1, max: 10, step: 0.5 },
   { key: 'tactical.max_tilt_pts', group: 'Görüş', label: 'Görüşün en büyük etkisi', unit: 'puan', min: 0, max: 15, step: 0.5 },

@@ -151,9 +151,10 @@ function groupStatus(m, g) {
   const ns = m.bands.counters['split:' + g] || 0;
   if (b.status !== 'inside') {
     const d = Math.abs(b.value - b.target);
-    return n >= C ? { text: `${num(d, 1)} ${b.status === 'above' ? 'fazla' : 'eksik'}`, cls: 'neg' } : { text: `${n} gündür aralık dışı`, cls: 'warnc' };
+    const now = m.due?.due.includes('group:' + g);
+    return now || n >= C ? { text: `${num(d, 1)} ${b.status === 'above' ? 'fazla' : 'eksik'}`, cls: 'neg' } : { text: `aralık dışı · öneriye ${C - n} gün`, cls: 'warnc' };
   }
-  if (spOut) return ns >= C ? { text: 'grup içi pay dışı', cls: 'neg' } : { text: `grup içi ${ns} gün`, cls: 'warnc' };
+  if (spOut) return ns >= C || m.due?.due.includes('split:' + g) ? { text: 'grup içi pay dışı', cls: 'neg' } : { text: `grup içi pay · öneriye ${C - ns} gün`, cls: 'warnc' };
   return { text: 'dengede', cls: 'pos' };
 }
 
@@ -193,7 +194,7 @@ function back(label) {
 
 function backLabel() {
   const prev = ui.stack[ui.stack.length - 2];
-  if (prev) return { dagilim: 'Dağılım', dengele: 'Dengele', grup: GROUP_LABELS[prev.id] || 'Geri', fon: prev.code, sozlesme: `Sözleşme ${prev.id}`, capa: 'Çapa', ayarlar: 'Ayarlar', yapistir: 'Yapıştır' }[prev.kind] || 'Geri';
+  if (prev) return { dagilim: 'Dağılım', dengele: 'Dengele', fonsinyal: 'Fonlarım', grup: GROUP_LABELS[prev.id] || 'Geri', fon: prev.code, sozlesme: `Sözleşme ${prev.id}`, capa: 'Çapa', ayarlar: 'Ayarlar', yapistir: 'Yapıştır' }[prev.kind] || 'Geri';
   return { ozet: 'Özet', sozlesmeler: 'Sözleşmeler', fonlar: 'Fonlar', sor: 'Sor' }[ui.tab];
 }
 
@@ -325,17 +326,32 @@ function walletCards(m, overlap = true) {
 function viewOzet(m) {
   const parts = [`<div class="bar"><span class="date">${todayLong()}</span><button class="iconbtn" data-act="go" data-kind="ayarlar" aria-label="Ayarlar">${svg('user', 22)}</button></div>`];
   if (!state.contracts.length) parts.push(noData());
-  else if (m.due?.active) {
+  else if (m.rec?.active) {
     const n = dailyNotice(m, GROUP_LABELS, CLASS_LABELS);
-    parts.push(`<button class="banner" data-act="go" data-kind="dengele"><span class="app-i">m</span><span><b>${esc(n.title)}</b><span>${esc(n.body)}</span></span>${chev()}</button>`);
+    parts.push(`<button class="banner" data-act="go" data-kind="dengele"><span class="app-i${m.rec.switches.some((x) => x.risk) ? ' warn' : ''}">m</span><span><b>${esc(n.title)}</b><span>${esc(n.body)}</span></span>${chev()}</button>`);
   } else if (m.due?.suppressed) {
-    parts.push(`<div class="banner"><span class="app-i ok">${svg('check', 20, 2.6)}</span><span><b>Öneri ertelendi</b><span>${m.P.decision.confirm_days} iş günü yeni öneri gelmez.</span></span></div>`);
+    parts.push(`<div class="banner"><span class="app-i ok">${svg('check', 20, 2.6)}</span><span><b>Öneri ertelendi</b><span>“Şimdi değil” dedin; ${m.P.decision.snooze_days} iş günü yeni öneri gelmez. Riskli fon uyarıları gelmeye devam eder.</span></span></div>`);
   } else if (m.bands) {
-    const watch = Object.keys(m.targets.groups).map((g) => [g, groupStatus(m, g)]).filter(([, s]) => s.cls === 'warnc');
-    parts.push(`<button class="banner" data-act="go" data-kind="dagilim"><span class="app-i ok">${svg('check', 20, 2.6)}</span><span><b>Bugün yapılacak bir şey yok</b><span>${watch.length ? esc(watch.map(([g, s]) => `${GROUP_LABELS[g]} ${s.text}`).join(' · ')) : 'Dağılımın hedeflerinin aralığında.'}</span></span>${chev()}</button>`);
+    const n = dailyNotice(m, GROUP_LABELS, CLASS_LABELS);
+    parts.push(`<button class="banner" data-act="go" data-kind="dagilim"><span class="app-i ok">${svg('check', 20, 2.6)}</span><span><b>${m.due.pending.length || m.funds?.weak.length ? 'Takipte' : 'Bugün yapılacak bir şey yok'}</b><span>${esc(n.body)}</span></span>${chev()}</button>`);
+  }
+  for (const r of m.funds?.risks || []) {
+    parts.push(`<button class="banner" data-act="go" data-kind="fon" data-code="${esc(r.code)}"><span class="app-i warn">!</span><span><b>${esc(r.code)}: ${esc(r.text)}</b><span>${r.kind === 'helal' ? 'Fondan çıkmayı düşün; öneri Dengele ekranında.' : 'Fonu incele.'}</span></span>${chev()}</button>`);
   }
   for (const [c, v] of Object.entries(m.latest.classes).filter(([, x]) => x.alert?.triggered)) {
     parts.push(`<button class="banner" data-act="explain" data-key="alert:${c}"><span class="app-i warn">!</span><span><b>Acil uyarı: ${CLASS_LABELS[c]}</b><span>20 iş gününde ${pct(v.alert.change_pct, 1)}. İnceleme çağrısı, öneri değil.</span></span></button>`);
+  }
+  if (m.bands) {
+    const d = m.due;
+    const C = m.P.decision.confirm_days;
+    const pend = d.pending.slice().sort((a, b) => a.left - b.left)[0];
+    const [ak, ag] = pend ? pend.key.split(':') : [];
+    const alloc = d.due.length ? [`Öneri hazır${d.immediate.length ? ' · büyük sapma' : ''}`, 'neg'] : pend ? [`${GROUP_LABELS[ag]}${ak === 'split' ? ' grup içi' : ''} · öneriye ${pend.left} gün`, 'warnc'] : ['Dengede', 'pos'];
+    const fs = m.funds;
+    const fund = fs.switches.length ? [`${fs.switches.length} fon değişikliği`, 'neg'] : fs.weak.length ? [`${fs.weak.length} fon ilk ${m.P.decision.fund_top_n}’te değil`, 'warnc'] : [fs.good.length ? `Hepsi ilk ${m.P.decision.fund_top_n}’te` : 'puanlı fon yok', fs.good.length ? 'pos' : 'mut'];
+    parts.push(`<div class="label">Sinyaller</div><div class="group">
+      <button class="row" data-act="go" data-kind="${d.due.length || pend ? 'dengele' : 'dagilim'}"><span class="l"><b>Dağılım</b><small>aralık dışı ${d.due.length + d.pending.length} grup · teyit ${C} iş günü</small></span><span class="r"><span class="num ${alloc[1]}" style="font-size:1rem">${alloc[0]}</span>${chev()}</span></button>
+      <button class="row" data-act="go" data-kind="fonsinyal"><span class="l"><b>Fonlar</b><small>kategorisinde sıra · tüm BES</small></span><span class="r"><span class="num ${fund[1]}" style="font-size:1rem">${fund[0]}</span>${chev()}</span></button></div>`);
   }
   if (m.drift) {
     const vals = rangeSlice(m.drift.series.map((p) => p.value), ui.range);
@@ -448,6 +464,34 @@ function viewGrup(m, g) {
   return parts.join('');
 }
 
+// ---------- Fon sinyali ----------
+function viewFonSinyal(m) {
+  const parts = [back(backLabel()), title('Fonlarım', `Kategorisindeki sıraya göre · tüm BES · ilk ${m.P.decision.fund_top_n} iyi`)];
+  if (!m.funds) return parts.join('') + noData();
+  const funds = fundIndex(m.latest);
+  const sw = Object.fromEntries(m.funds.switches.map((x) => [x.from, x]));
+  const risk = Object.fromEntries(m.funds.risks.map((x) => [x.code, x]));
+  const weak = Object.fromEntries(m.funds.weak.map((x) => [x.code, x]));
+  const order = Object.entries(m.drift.current).sort((a, b) => {
+    const k = (c) => (risk[c] ? 0 : sw[c] ? 1 : weak[c] ? 2 : funds[c]?.score === null ? 3 : 4);
+    return k(a[0]) - k(b[0]) || b[1] - a[1];
+  });
+  const rows = order.map(([code, w]) => {
+    const f = funds[code];
+    let st = ['iyi', 'pos'];
+    let sub = f && f.score !== null ? `${esc(CATEGORY_LABELS[f.category] || '')} · ${f.peers} fonda ${f.rank}.` : 'puanı yok';
+    if (risk[code]) st = [risk[code].text, 'neg'];
+    if (sw[code]) { st = [`→ ${sw[code].to}`, 'neg']; sub = esc(sw[code].reason); }
+    else if (weak[code]) { st = [`${weak[code].rank}.`, 'warnc']; sub = `ilk ${m.P.decision.fund_top_n}: ${weak[code].top.map((x) => `${esc(x.code)} ${num(x.score, 0)}`).join(' · ')}`; }
+    else if (f && f.score === null) st = ['yeni', 'mut'];
+    return `<button class="row" data-act="go" data-kind="fon" data-code="${esc(code)}"><span class="l" style="flex:1"><b>${esc(code)} <span class="mut" style="font-weight:700;font-size:.9rem">%${num(w, 0)}</span></b><small>${sub}</small></span><span class="r"><span class="num ${st[1]}" style="font-size:1rem">${st[0]}</span>${chev()}</span></button>`;
+  }).join('');
+  parts.push(`<div style="height:.8rem"></div><div class="group">${rows}</div>`);
+  parts.push(`<p class="note">Zayıf: kategorisinde ilk ${m.P.decision.fund_top_n}’te değil. Değiştir: kategorinin 1.’sinden en az ${m.P.decision.switch_score_gap} puan geride. Eşikler Ayarlar → Model ayarları’nda.</p>`);
+  if (m.funds.switches.length) parts.push('<div class="btns"><button class="btn primary" data-act="go" data-kind="dengele">Değişiklikleri gör</button></div>');
+  return parts.join('');
+}
+
 // ---------- Dengele ----------
 function viewDengele(m) {
   const parts = [back(backLabel())];
@@ -456,7 +500,15 @@ function viewDengele(m) {
   if (!p) return parts.join('') + title('Dengele') + '<p class="empty">Şu an öneri yok.</p>';
   const total = m.steps.reduce((s, c) => s + c.steps.length, 0);
   const k = m.steps.filter((c) => c.steps.length).length;
-  parts.push(title('Dengele', total ? `${k} sözleşmede ${total} değişiklik${m.due?.active ? '' : ' · bilgi için'}` : 'Değişiklik gerekmiyor'));
+  parts.push(title('Dengele', total ? `${k} sözleşmede ${total} değişiklik${p.preview ? ' · önizleme' : ''}` : 'Değişiklik gerekmiyor'));
+  if (p.preview) parts.push(`<p class="note">Henüz kesin öneri değil; ${m.due.pending.length ? 'aralık dışı süre teyit süresine ulaşınca' : 'koşullar oluşunca'} öneri olur. Şimdi uygulamak istersen yine de kullanabilirsin.</p>`);
+  if (p.switches.length) {
+    parts.push(`<div class="label">Fon değişiklikleri</div><div class="group">${p.switches.map((x) => `<button class="row" data-act="go" data-kind="fon" data-code="${esc(x.to)}"><span class="l" style="flex:1"><b>${esc(x.from)} → ${esc(x.to)}</b><small>${esc(x.reason)}</small></span><span class="r"><span class="num ${x.risk ? 'neg' : ''}">%${num(x.weight, 0)}</span>${chev()}</span></button>`).join('')}</div>`);
+  }
+  if (p.rebalance) {
+    const why = Object.entries(m.bands.groups).filter(([, b]) => b.status !== 'inside').map(([g, b]) => `${GROUP_LABELS[g]} %${num(b.value, 0)}, hedef %${num(b.target, 0)}`);
+    parts.push(`<p class="note">Yeniden dağıtım: ${esc(why.join(' · ') || 'grup içi pay aralık dışında')}.</p>`);
+  }
   const after = (g) => m.targets.groups[g].classes.reduce((s, c) => s + (p.exposure[c] || 0), 0);
   const w = worstGroup(m);
   if (w) {
@@ -486,13 +538,12 @@ function viewDengele(m) {
     }).join('');
     const keep = c.keep.length ? `<div class="row"><span class="l"><small>${c.keep.map((x) => `${esc(x)} %${p.weights[x]}`).join(', ')} aynı kalır</small></span></div>` : '';
     parts.push(`<div class="group">${rows}${keep}</div>`);
-    if (c.foreign.length) parts.push(`<p class="note warnc">${c.foreign.map(esc).join(', ')} bu sözleşmenin şirketinde olmayabilir; şirket uygulamasında kontrol et.</p>`);
   }
   parts.push('<p class="note">Oranlar her sözleşmede gireceğin yüzdeler; hepsine aynı dağılım uygulanır. Yaptıkça işaretle.</p>');
   if (p.gaps.length) parts.push(`<p class="note neg">Uygun araç yok: ${p.gaps.map((g) => `${CLASS_LABELS[g.cls]} hedefe ${num(Math.abs(g.gap), 1)} puan uzak`).join(', ')}.</p>`);
   parts.push('<div class="btns"><button class="btn" data-act="explain" data-key="proposal">Hesabı göster</button></div>');
   parts.push(`<div class="slide"><input type="range" min="0" max="100" value="0" data-in="slide" aria-label="Hepsini yaptım, kaydır"><span class="knob">${svg('chev2', 26, 2.8)}</span>Hepsini yaptım · kaydır</div>`);
-  if (m.due?.active) parts.push('<div class="btns"><button class="btn plain" data-act="reject">Şimdi değil</button></div>');
+  if (m.rec?.active) parts.push('<div class="btns"><button class="btn plain" data-act="reject">Şimdi değil</button></div>');
   return parts.join('');
 }
 
@@ -576,7 +627,7 @@ function viewFonlar(m) {
   }
   const list = helal.filter((f) => f.category === ui.category).sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.code.localeCompare(b.code));
   parts.push(`<div class="label">Puana göre · 50 kategori ortası</div><div class="group">${list.map((f) => `<button class="row" data-act="go" data-kind="fon" data-code="${esc(f.code)}">
-    <span class="l" style="flex:1"><b>${esc(f.code)}${mine[f.code] ? ` <span class="tag">sende %${num(mine[f.code], 0)}</span>` : ''}${f.flags.filter((x) => x !== 'yeni_fon').map((x) => ` <span class="tag warn">${FLAG_LABELS[x]}</span>`).join('')}</b>
+    <span class="l" style="flex:1"><b>${f.rank ? `<span class="mut" style="font-size:.9rem">${f.rank}.</span> ` : ''}${esc(f.code)}${mine[f.code] ? ` <span class="tag${f.rank && f.rank > m.P.decision.fund_top_n ? ' warn' : ''}">sende %${num(mine[f.code], 0)}</span>` : ''}${f.flags.filter((x) => x !== 'yeni_fon').map((x) => ` <span class="tag warn">${FLAG_LABELS[x]}</span>`).join('')}</b>
     <small>${esc(fundReason(f, m.P))} · ücret ${pct(f.fee, 2)}</small>${strip(exposureParts(f.exposure), 'strip thin')}</span>
     <span class="r"><span class="num ${f.score === null ? 'mut' : f.score >= 55 ? 'pos' : f.score < 45 ? 'neg' : ''}" style="font-size:1.4rem">${f.score === null ? 'yeni' : num(f.score, 0)}</span>${chev()}</span></button>`).join('')}</div>`);
   return parts.join('');
@@ -593,6 +644,8 @@ function viewFon(m, code) {
   parts.push(`<div class="fid"><span class="ico" style="--c:var(${KIND_VAR[k]})">${svg(k, 30, 2)}</span><div><h1>${esc(code)}</h1><p>${esc(n.short)}${mine ? ` · sende %${num(mine, 1)}` : ''}</p></div></div>`);
   if (!f.halal) parts.push(`<div class="banner"><span class="app-i warn">!</span><span><b>Helal dışı</b><span>${esc(f.halal_reason || '')}</span></span></div>`);
   if (f.flags.length) parts.push(`<p class="note">${f.flags.map((x) => `<span class="tag warn">${FLAG_LABELS[x]}</span>`).join(' ')}</p>`);
+  const sig = mine && m.funds ? (m.funds.switches.find((x) => x.from === code) || m.funds.weak.find((x) => x.code === code)) : null;
+  if (sig) parts.push(`<button class="banner" ${sig.to ? `data-act="go" data-kind="fon" data-code="${esc(sig.to)}"` : ''}><span class="app-i warn">!</span><span><b>${sig.to ? `Değiştir: ${esc(sig.to)}` : `Kategorisinde ${sig.rank}.`}</b><span>${sig.to ? esc(sig.reason) : `İlk ${m.P.decision.fund_top_n}: ${sig.top.map((x) => `${esc(x.code)} ${num(x.score, 0)}`).join(' · ')}`}</span></span>${sig.to ? chev() : ''}</button>`);
   const y1 = f.returns?.['1y'];
   const ex = f.excess?.['1y'];
   parts.push(`<div class="hero"><div class="k">Son 1 yıl</div><div class="v"><strong class="${(y1 ?? 0) < 0 ? 'neg' : 'pos'}">${pct(y1, 1, true)}</strong><span>${ex === null || ex === undefined ? '' : `${passive ? 'kıyasından' : 'içeriğinden'} ${num(Math.abs(ex), 1)} puan ${ex >= 0 ? 'fazla' : 'geride'}`}</span></div></div>`);
@@ -696,19 +749,15 @@ function answer(m, q) {
     return { text: `En büyük sapma <b>${GROUP_LABELS[g].toLocaleLowerCase('tr-TR')}</b>: %${num(b.value, 1)}, hedef %${num(b.target, 0)}. ${m.bands.counters['group:' + g] || 0} iş günüdür ${b.status === 'inside' ? 'aralıkta' : 'aralık dışında'}. ${CLASS_LABELS[cls]} için görüş: ${esc(trendSentence(cls))}`, go: 'grup:' + g };
   }
   if (q === 'funds') {
-    if (!m.drift) return { text: 'Önce sözleşmelerini yapıştır.' };
-    const funds = fundIndex(m.latest);
-    const best = {};
-    for (const f of m.latest.funds) if (f.halal && f.score !== null && (!best[f.category] || f.score > best[f.category].score)) best[f.category] = f;
-    const gap = m.P.decision.switch_score_gap;
-    const lines = Object.keys(m.drift.current).map((c) => funds[c]).filter(Boolean).map((f) => {
-      const b = best[f.category];
-      if (f.score === null) return `<b>${esc(f.code)}</b>: henüz puanı yok.`;
-      if (!b || b.code === f.code) return `<b>${esc(f.code)}</b> ${num(f.score, 0)}: kategorisinin en iyisi.`;
-      const d = b.score - f.score;
-      return `<b>${esc(f.code)}</b> ${num(f.score, 0)}: en iyisi ${esc(b.code)} ${num(b.score, 0)}; fark ${num(d, 0)} puan, ${d >= gap ? 'değiştirmeye değer' : 'değiştirmeye henüz değmez'}.`;
-    });
-    return { text: lines.join('<br>') };
+    if (!m.funds) return { text: 'Önce sözleşmelerini yapıştır.' };
+    const fs = m.funds;
+    const lines = [
+      ...fs.switches.map((x) => `<b>${esc(x.from)} → ${esc(x.to)}</b>: ${esc(x.reason)}.`),
+      ...fs.weak.filter((x) => !fs.switches.some((s) => s.from === x.code)).map((x) => `<b>${esc(x.code)}</b> kategorisinde ${x.rank}.; fark küçük, şimdilik izle.`),
+      ...fs.good.map((x) => `<b>${esc(x.code)}</b> kategorisinde ${x.rank}. — iyi.`),
+      ...fs.fresh.map((x) => `<b>${esc(x.code)}</b>: henüz puanı yok.`),
+    ];
+    return { text: lines.join('<br>') || 'Puanlı fonun yok.', go: fs.switches.length ? 'dengele' : 'fonsinyal' };
   }
   return { text: '' };
 }
@@ -805,7 +854,7 @@ function render() {
   const m = compute(latest, state, { withProposal: p?.kind === 'dengele' });
   render.m = m;
   const views = {
-    dagilim: () => viewDagilim(m), dengele: () => viewDengele(m), grup: () => viewGrup(m, p.id), fon: () => viewFon(m, p.code),
+    dagilim: () => viewDagilim(m), dengele: () => viewDengele(m), fonsinyal: () => viewFonSinyal(m), grup: () => viewGrup(m, p.id), fon: () => viewFon(m, p.code),
     sozlesme: () => viewSozlesme(m, p.id), yapistir: () => viewYapistir(m, p.id), paylar: () => viewPaylar(m), capa: () => viewCapa(m),
     ayarlar: () => viewAyarlar(m), parametreler: () => viewParametreler(m), bildirim: () => viewBildirim(), yedek: () => viewYedek(), veri: () => viewVeri(m),
   };
