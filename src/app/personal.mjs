@@ -261,11 +261,11 @@ export function recommendationDue(bands, decisions, today, params) {
   const d = params.decision;
   const immediate = [];
   for (const [g, b] of Object.entries(bands.groups || {})) {
-    const dev = Math.abs(b.value - b.target);
-    if (b.status !== 'inside' && (dev >= d.immediate_band_mult * b.width || (d.immediate_pts > 0 && dev >= d.immediate_pts))) immediate.push('group:' + g);
+    // Kırmızı: sapma hedefin red_rel_pct'ini aşarsa teyit beklenmez.
+    if (b.status !== 'inside' && Math.abs(b.value - b.target) >= (b.target * d.red_rel_pct) / 100) immediate.push('group:' + g);
   }
   for (const [g, sp] of Object.entries(bands.splits || {})) {
-    if (Object.values(sp).some((x) => x.status !== 'inside' && Math.abs(x.value - x.target) >= d.immediate_band_mult * d.split_band_pts)) immediate.push('split:' + g);
+    if (Object.values(sp).some((x) => x.status !== 'inside' && Math.abs(x.value - x.target) >= (d.split_band_pts * d.red_rel_pct) / d.yellow_rel_pct)) immediate.push('split:' + g);
   }
   const confirmed = Object.entries(bands.counters).filter(([, n]) => n >= d.confirm_days).map(([c]) => c);
   const due = [...new Set([...immediate, ...confirmed])];

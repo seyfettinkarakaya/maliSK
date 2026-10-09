@@ -1,7 +1,7 @@
 // Göreli bant ve oynaklığa göre acil uyarı (docs/model.md, Bölüm 11).
 
 export function bandWidth(target, d) {
-  return Math.min(d.band_max_pts, Math.max(d.band_min_pts, (target * d.band_rel_pct) / 100));
+  return (target * d.yellow_rel_pct) / 100;
 }
 
 export function bandCheck(exposure, targets, d) {
@@ -11,7 +11,8 @@ export function bandCheck(exposure, targets, d) {
     const low = Math.max(0, t - w);
     const high = t + w;
     const x = exposure[cls] ?? 0;
-    out[cls] = { target: t, width: w, low, high, value: x, status: x > high ? 'above' : x < low ? 'below' : 'inside' };
+    const red = (t * d.red_rel_pct) / 100;
+    out[cls] = { target: t, width: w, red, low, high, value: x, status: x > high ? 'above' : x < low ? 'below' : 'inside', level: x <= high && x >= low ? null : Math.abs(x - t) >= red ? 'red' : 'yellow' };
   }
   return out;
 }

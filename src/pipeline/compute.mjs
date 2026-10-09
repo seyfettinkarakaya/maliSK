@@ -13,7 +13,7 @@ import {
   sampleEvery, monthlyReturns, shiftDays, shiftMonths,
 } from './series.mjs';
 
-export const MODEL_VERSION = '2.6';
+export const MODEL_VERSION = '2.7';
 const RISKY = ['gold', 'silver', 'equity_tr', 'equity_foreign', 'fx_fixed'];
 const PERIODS = ['1m', '3m', '6m', 'ytd', '1y', '3y', '5y'];
 const TAIL_DAYS = 130;

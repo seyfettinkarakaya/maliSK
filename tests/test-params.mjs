@@ -13,13 +13,13 @@ test('meta listesindeki her anahtar varsayılanlarda var', () => {
 });
 
 test('değişiklik uygulanır, varsayılan bozulmaz, listede olmayan yok sayılır', () => {
-  const e = effectiveParams(P, { 'decision.band_rel_pct': 30, 'anchor.window_years': 9 }, PARAM_META);
-  assert.equal(e.decision.band_rel_pct, 30);
+  const e = effectiveParams(P, { 'decision.yellow_rel_pct': 15, 'anchor.window_years': 9 }, PARAM_META);
+  assert.equal(e.decision.yellow_rel_pct, 15);
   assert.equal(e.anchor.window_years, P.anchor.window_years);
-  assert.equal(P.decision.band_rel_pct, 25);
+  assert.equal(P.decision.yellow_rel_pct, 10);
   assert.equal(paramVersion(P, { n: 3 }), `${P.version}.3`);
   assert.deepEqual(validateParams(P), []);
-  const bad = effectiveParams(P, { 'tactical.weights.trend': 0.7, 'decision.band_min_pts': 12 }, PARAM_META);
+  const bad = effectiveParams(P, { 'tactical.weights.trend': 0.7, 'decision.yellow_rel_pct': 25 }, PARAM_META);
   assert.equal(validateParams(bad).length, 2);
 });
 

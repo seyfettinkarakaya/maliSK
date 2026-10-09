@@ -203,13 +203,11 @@ export const DEFAULT_PARAMS = {
     max_funds: 20,
   },
   decision: {
-    band_rel_pct: 25,
-    band_min_pts: 3,
-    band_max_pts: 10,
+    // Sarı ve kırmızı uyarı: grubun sapması hedefinin bu yüzdesini aşarsa (göreli; küçük gruplarda da çalışır).
+    // Sarı: aralık dışı, confirm_days sürerse öneri. Kırmızı: beklemeden öneri.
+    yellow_rel_pct: 10,
+    red_rel_pct: 20,
     confirm_days: 20,
-    // Anında öneri: sapma aralık genişliğinin bu katını ya da (0 değilse) bu kadar puanı aşarsa teyit beklenmez.
-    immediate_band_mult: 2,
-    immediate_pts: 0,
     // "Şimdi değil" denince aynı tür öneri bu kadar iş günü tekrar gelmez (riskli fon uyarıları hariç).
     snooze_days: 20,
     // Fon sinyali: kategorisinde ilk N'de olmayan fon zayıf; 1.'den bu kadar puan gerideyse değiştir önerilir.
@@ -226,33 +224,41 @@ export const DEFAULT_PARAMS = {
 
 // Telefondan değiştirilebilen parametreler (Ayarlar → Model ayarları). Hepsi telefonda yeniden hesaplanır:
 // hedef, bant, öneri, acil uyarı, çapa önerisi (kovaryans hattan gelir) ve fon puanı (bileşenler hattan gelir).
+// Başlıklar soru biçiminde; etiket bir cümle, help ek açıklama. Örnekler arayüzde kullanıcının hedefleriyle hesaplanır.
+export const PARAM_GROUPS = {
+  rebalance: { title: 'Ne zaman dengeleme önerilsin?', note: 'Sapma, grubun hedefinin yüzdesi olarak ölçülür; küçük gruplarda da aynı ölçü işler.' },
+  funds: { title: 'Fonlarım nasıl değerlendirilsin?', note: 'Sıra akran grubunda ve seçtiğin firmaların fonları arasındadır.' },
+  proposal: { title: 'Öneri hesaplanırken', note: '' },
+  view: { title: 'Piyasa görüşü hedefi ne kadar kaydırsın?', note: 'Görüş sinyali S, −1 (çok olumsuz) ile +1 (çok olumlu) arasındadır.' },
+  alert: { title: 'Ani düşüşte uyarı', note: '' },
+  anchor: { title: 'Çapa önerisi', note: 'Yalnız öneridir; çapayı sen belirlersin. Kendi çapanı girdiysen bu ayarların etkisi olmaz.' },
+  score: { title: 'Fon puanı nasıl hesaplansın?', note: 'Beş ağırlık puandaki paylardır; oranları önemlidir.' },
+};
+
 export const PARAM_META = [
-  { key: 'decision.band_rel_pct', group: 'Aralık', label: 'Grup aralığı (hedefin yüzdesi)', unit: '%', min: 5, max: 60, step: 5 },
-  { key: 'decision.band_min_pts', group: 'Aralık', label: 'Aralık en az', unit: 'puan', min: 1, max: 10, step: 0.5 },
-  { key: 'decision.band_max_pts', group: 'Aralık', label: 'Aralık en çok', unit: 'puan', min: 3, max: 20, step: 0.5 },
-  { key: 'decision.split_band_pts', group: 'Aralık', label: 'Grup içi pay aralığı', unit: 'puan', min: 2, max: 30, step: 1 },
-  { key: 'decision.split_min_group_pct', group: 'Aralık', label: 'Grup içi pay denetimi için en küçük grup', unit: '%', min: 0, max: 20, step: 1 },
-  { key: 'decision.confirm_days', group: 'Öneri', label: 'Teyit süresi', unit: 'iş günü', min: 1, max: 60, step: 1 },
-  { key: 'decision.immediate_band_mult', group: 'Öneri', label: 'Anında öneri: aralığın katı', unit: '×', min: 1, max: 5, step: 0.25 },
-  { key: 'decision.immediate_pts', group: 'Öneri', label: 'Anında öneri: sapma puanı (0 = kapalı)', unit: 'puan', min: 0, max: 30, step: 0.5 },
-  { key: 'decision.snooze_days', group: 'Öneri', label: '“Şimdi değil” sonrası bekleme', unit: 'iş günü', min: 1, max: 60, step: 1 },
-  { key: 'decision.fund_top_n', group: 'Fon sinyali', label: 'Zayıf: akran grubunda ilk kaçta değilse', unit: 'sıra', min: 1, max: 10, step: 1 },
-  { key: 'decision.switch_score_gap', group: 'Fon sinyali', label: 'Değiştir: 1.’den puan farkı', unit: 'puan', min: 0, max: 50, step: 1 },
-  { key: 'fund_quality.promising_top_n', group: 'Fon sinyali', label: 'Ümit vaat eden: ham puanla ilk kaçta', unit: 'sıra', min: 1, max: 10, step: 1 },
-  { key: 'fund_quality.promising_min_raw', group: 'Fon sinyali', label: 'Ümit vaat eden: ya da ham puan en az', unit: 'puan', min: 50, max: 100, step: 1 },
-  { key: 'fund_quality.new_fund_cap_pct', group: 'Öneri', label: 'Yeni fon tavanı', unit: '%', min: 0, max: 20, step: 1 },
-  { key: 'allocation.no_instrument_pts', group: 'Öneri', label: '“Uygun araç yok” eşiği', unit: 'puan', min: 1, max: 10, step: 0.5 },
-  { key: 'tactical.max_tilt_pts', group: 'Görüş', label: 'Görüşün en büyük etkisi', unit: 'puan', min: 0, max: 15, step: 0.5 },
-  { key: 'tactical.full_tilt_at', group: 'Görüş', label: 'Tam etki için S', unit: '', min: 0.1, max: 1, step: 0.05 },
-  { key: 'tactical.weights.trend', group: 'Görüş', label: 'Trend ağırlığı (T)', unit: '', min: 0, max: 1, step: 0.05 },
-  { key: 'tactical.weights.macro', group: 'Görüş', label: 'Makro ağırlığı (M)', unit: '', min: 0, max: 1, step: 0.05 },
-  { key: 'tactical.weights.user', group: 'Görüş', label: 'Senin görüşünün ağırlığı (K)', unit: '', min: 0, max: 1, step: 0.05 },
-  { key: 'decision.alert_sigma_mult', group: 'Acil uyarı', label: 'Uyarı eşiği (normal oynaklığın katı)', unit: '×', min: 1, max: 5, step: 0.25 },
-  { key: 'anchor.target_vol_pct', group: 'Çapa önerisi', label: 'Hedef oynaklık', unit: '%', min: 4, max: 30, step: 1 },
-  { key: 'anchor.class_cap_pct', group: 'Çapa önerisi', label: 'Sınıf tavanı', unit: '%', min: 15, max: 100, step: 5 },
-  { key: 'fund_quality.weights.consistency', group: 'Fon puanı', label: 'İstikrar ağırlığı', unit: '', min: 0, max: 1, step: 0.05 },
-  { key: 'fund_quality.weights.excess_index', group: 'Fon puanı', label: 'Fazla getiri ağırlığı', unit: '', min: 0, max: 1, step: 0.05 },
-  { key: 'fund_quality.weights.risk', group: 'Fon puanı', label: 'Risk ağırlığı', unit: '', min: 0, max: 1, step: 0.05 },
-  { key: 'fund_quality.weights.cost', group: 'Fon puanı', label: 'Ücret ağırlığı', unit: '', min: 0, max: 1, step: 0.05 },
-  { key: 'fund_quality.weights.hygiene', group: 'Fon puanı', label: 'Düzen ağırlığı', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'decision.yellow_rel_pct', group: 'rebalance', label: 'Bir grup hedefinden yüzde kaç saparsa sarı uyarı versin?', help: 'Sarıda öneri hemen gelmez; aşağıdaki süre boyunca sürerse gelir.', unit: '%', min: 5, max: 50, step: 1 },
+  { key: 'decision.red_rel_pct', group: 'rebalance', label: 'Bir grup hedefinden yüzde kaç saparsa kırmızı uyarı versin?', help: 'Kırmızıda dengeleme önerisi beklemeden gelir.', unit: '%', min: 10, max: 100, step: 1 },
+  { key: 'decision.confirm_days', group: 'rebalance', label: 'Sarı uyarı kaç iş günü sürerse dengeleme önerilsin?', help: '20 iş günü yaklaşık bir aydır. Kısa dalgalanmada öneri gelmesin diye.', unit: 'iş günü', min: 1, max: 60, step: 1 },
+  { key: 'decision.snooze_days', group: 'rebalance', label: '“Şimdi değil” dediğimde öneri kaç iş günü tekrar gelmesin?', help: 'Riskli fon uyarıları bundan etkilenmez.', unit: 'iş günü', min: 1, max: 60, step: 1 },
+  { key: 'decision.split_band_pts', group: 'rebalance', label: 'Grup içindeki oran (altın/gümüş gibi) kaç puan saparsa uyarsın?', help: 'Grubun toplamı yerindeyken içindeki dağılımın kaymasını yakalar.', unit: 'puan', min: 2, max: 30, step: 1 },
+  { key: 'decision.split_min_group_pct', group: 'rebalance', label: 'Grup portföyün yüzde kaçından küçükse grup içi orana bakılmasın?', help: 'Küçük grupta oran çok oynar; gereksiz uyarı olmasın diye.', unit: '%', min: 0, max: 20, step: 1 },
+  { key: 'decision.fund_top_n', group: 'funds', label: 'Fonum akran grubunda ilk kaçta değilse zayıf sayılsın?', help: 'Zayıf fon için hemen uyarı gelir; ilk sıralardaki fonlar gösterilir.', unit: 'sıra', min: 1, max: 10, step: 1 },
+  { key: 'decision.switch_score_gap', group: 'funds', label: 'Grubun en iyisi benim fonumdan kaç puan yüksekse fon değiştirmeyi önersin?', help: 'Fark bundan küçükse yalnız zayıf uyarısı kalır; birkaç puan için fon değiştirtmez.', unit: 'puan', min: 0, max: 50, step: 1 },
+  { key: 'fund_quality.promising_top_n', group: 'funds', label: 'Genç bir fon (12–36 ay) ham puanıyla ilk kaçtaysa “ümit vaat eden” listesine girsin?', help: 'Ham puan: kısa geçmiş düzeltmesi yapılmadan. Liste yalnız bilgi verir.', unit: 'sıra', min: 1, max: 10, step: 1 },
+  { key: 'fund_quality.promising_min_raw', group: 'funds', label: 'Ya da genç fonun ham puanı en az kaç olursa listeye girsin?', help: 'İki koşuldan biri yeter.', unit: 'puan', min: 50, max: 100, step: 1 },
+  { key: 'fund_quality.new_fund_cap_pct', group: 'proposal', label: '12 aydan genç bir fona öneride en çok yüzde kaç verilsin?', help: 'Geçmişi kısa fonun riski bilinmez.', unit: '%', min: 0, max: 20, step: 1 },
+  { key: 'allocation.no_instrument_pts', group: 'proposal', label: 'Hiçbir helal fonla hedefe kaç puandan fazla yaklaşılamıyorsa “uygun araç yok” desin?', help: 'Örneğin yabancı hisse için helal fon azsa bu uyarı çıkar.', unit: 'puan', min: 1, max: 10, step: 0.5 },
+  { key: 'tactical.max_tilt_pts', group: 'view', label: 'Görüş bir grubun hedefini en çok kaç puan kaydırsın?', help: 'Olumlu görüşte hedef artar, olumsuzda azalır.', unit: 'puan', min: 0, max: 15, step: 0.5 },
+  { key: 'tactical.full_tilt_at', group: 'view', label: 'Sinyal S kaça ulaşınca kaydırma tam olsun?', help: 'Daha küçük S’de kaydırma orantılı olur. Değer büyüdükçe görüş hedefi daha yavaş kaydırır.', unit: 'S', min: 0.1, max: 1, step: 0.05 },
+  { key: 'tactical.weights.trend', group: 'view', label: 'Sinyalde fiyat trendinin ağırlığı', help: 'Son 1, 3 ve 12 ayın yönü ve 210 günlük ortalama.', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'tactical.weights.macro', group: 'view', label: 'Sinyalde makro verinin (faiz, piyasa rejimi) ağırlığı', help: 'EVDS ve FRED anahtarları girilene kadar makro sinyal 0’dır.', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'tactical.weights.user', group: 'view', label: 'Sinyalde senin görüşünün ağırlığı', help: 'Üç ağırlığın toplamı 1 olmalı.', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'decision.alert_sigma_mult', group: 'alert', label: 'Son 20 iş günündeki düşüş, normal oynaklığın kaç katını geçerse acil uyarı versin?', help: 'Oynak varlıkta eşik kendiliğinden büyür, sakin varlıkta küçülür.', unit: '×', min: 1, max: 5, step: 0.25 },
+  { key: 'anchor.target_vol_pct', group: 'anchor', label: 'Riskli kısmın yıllık oynaklığı en çok yüzde kaç olsun?', help: 'Fazlası TL sabite gider.', unit: '%', min: 4, max: 30, step: 1 },
+  { key: 'anchor.class_cap_pct', group: 'anchor', label: 'Bir varlık sınıfı en çok yüzde kaç olsun?', help: '', unit: '%', min: 15, max: 100, step: 5 },
+  { key: 'fund_quality.weights.consistency', group: 'score', label: 'İstikrar: her dönemde grubunun ortasında ya da üstünde kalması', help: '', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'fund_quality.weights.excess_index', group: 'score', label: 'Fazla getiri: içeriğinin (ya da kıyasının) getirisini geçmesi', help: 'Uzun vade ağırlıklı: 1 yıl %20, 3 yıl %30, 5 yıl %50.', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'fund_quality.weights.risk', group: 'score', label: 'Risk: düşüşlerde dayanıklılık ya da kıyasını yakından izleme', help: '', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'fund_quality.weights.cost', group: 'score', label: 'Ücret: yıllık fon işletim giderinin düşüklüğü', help: '', unit: '', min: 0, max: 1, step: 0.05 },
+  { key: 'fund_quality.weights.hygiene', group: 'score', label: 'Düzen: ücret yasal tavanı aşmıyor ve fon 500 milyon TL’den büyük', help: '', unit: '', min: 0, max: 1, step: 0.05 },
 ];

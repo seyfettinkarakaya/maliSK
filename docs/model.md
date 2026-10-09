@@ -1,4 +1,4 @@
-# maliSK modeli — sürüm 2.6
+# maliSK modeli — sürüm 2.7
 
 **Tarih:** 9 Ekim 2026 · **Sahibi:** Seyfettin · Kaynak: BES Fon Danışmanı spesifikasyonu 2.0
 ve 7–8 Ekim 2026 tarihli model görüşmelerindeki kararlar (en altta değişiklik günlüğü).
@@ -151,8 +151,10 @@ puanlanmaz, en çok %5 ağırlık alır.
 
 ## 8. Katman 4 — karar
 
-- **Grup bandı (göreli):** grup maruziyeti (yönetilen sınıflarının toplamı) için genişlik = grup
-  hedefinin %25'i, en az 3, en çok 10 puan; alt sınır 0'ın altına inmez.
+- **Grup bandı (sarı ve kırmızı, hedefin yüzdesi):** grup maruziyeti (yönetilen sınıflarının toplamı) için
+  sapma `|x − h|`. Sarı: sapma ≥ `h × %10` (aralık dışı; teyit süresi boyunca sürerse öneri).
+  Kırmızı: sapma ≥ `h × %20` (beklemeden öneri). Örnek: hedef 30 → 27–33 normal, 24'ün altı ya da 36'nın
+  üstü kırmızı; hedef 10 → 9–11 normal, 8–12 dışı kırmızı.
 - **Grup içi pay bandı:** sınıfın grup içindeki payı `maruziyet_c / maruziyet_g × 100`; bant = hedef
   pay ± 10 puan (0–100 arası). Grup portföyün %5'inden küçükse pay denetlenmez.
 - **Sayaç (geçmişten sayma):** her grup ve her grup içi pay için ayrı; bant dışında her iş günü +1, içeri
@@ -161,8 +163,8 @@ puanlanmaz, en çok %5 ağırlık alır.
 
 ### 8.1 Dağılım sinyali
 
-- **Anında öneri:** grubun sapması `|x − h| ≥ k · genişlik` (k = 2) ya da `≥ P` puan (P = 0 kapalı);
-  grup içi payda `|x − h| ≥ k · 10`. Teyit beklenmez.
+- **Anında öneri (kırmızı):** grubun sapması `|x − h| ≥ h × %20`; grup içi payda
+  `|x − h| ≥ 10 × kırmızı / sarı` (varsayılan 20 puan). Teyit beklenmez.
 - **Teyitli öneri:** sayaç teyit süresine (20 iş günü) ulaşınca. Arada ekranda "takipte · n iş günü kaldı"
   yazar; öneri önizlemesi her zaman açılabilir.
 
@@ -226,9 +228,9 @@ Ek A'daki 8 fonla, yılbaşı = 9 ay:
    4,8 · Döviz sabit 4,0 · Belirsiz 5,4; ücret 1,39.
 5. Önerilen dağılım (VGA 37, KGC 5, VEY 28, AGH 10, KRM 20): Altın 35,5 · Gümüş 4,7 · TL sabit 31,5 ·
    Yurtiçi hisse 16,3 · Yabancı hisse 4,8 · Döviz sabit 4,2 · Belirsiz 3,1; ücret 1,30.
-6. Bant (hedef Altın 35, Gümüş 5, TL sabit 30, Yurtiçi hisse 20, Yabancı hisse 10): göreli bantta
-   Altın ve Gümüş üstte, TL sabit ve Yabancı hisse altta, Yurtiçi hisse içinde. Sabit ±10 bantta
-   Yabancı hisse içinde kalır.
+6. Bant (hedef Altın 35, Gümüş 5, TL sabit 30, Yurtiçi hisse 20, Yabancı hisse 10): sarı %10'da
+   Altın ve Gümüş üstte, TL sabit, Yurtiçi ve Yabancı hisse altta; Yurtiçi hisse sarı, Altın kırmızı.
+   Sarı %25'te Yurtiçi hisse içinde kalır.
 
 ## 11. Değişiklik günlüğü (2.0 → 2.1)
 
@@ -243,6 +245,12 @@ Ek A'daki 8 fonla, yılbaşı = 9 ay:
   fazla getiri.
 - Hak sayacı, Google Sheet, TL tutar ve XIRR ilk sürümden çıkarıldı. Ledoit-Wolf kapalı (Ö2).
 - Çapada olmayan sınıf izlenir (kullanıcı onayladı, 8 Ekim 2026).
+
+### 2.6 → 2.7 (9 Ekim 2026, kullanıcı onayı)
+
+- Bant sarı ve kırmızı uyarıya dönüştü; ikisi de hedefin yüzdesi (%10 ve %20). Eski göreli bant (%25,
+  en az 3, en çok 10 puan) ve anında öneri ayarları (aralığın 2 katı, P puan) kaldırıldı.
+- Ayarlar soru biçiminde başlıklar, cümle etiketler ve kullanıcının hedefleriyle hesaplanan örneklerle.
 
 ### 2.5 → 2.6 (9 Ekim 2026, kullanıcı onayı)
 

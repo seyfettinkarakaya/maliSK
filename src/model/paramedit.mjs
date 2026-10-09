@@ -12,7 +12,7 @@ function setPath(obj, key, value) {
   o[parts[parts.length - 1]] = value;
 }
 
-// values: { 'decision.band_rel_pct': 30, ... } — yalnız meta listesindeki anahtarlar uygulanır.
+// values: { 'decision.yellow_rel_pct': 15, ... } — yalnız meta listesindeki anahtarlar uygulanır.
 export function effectiveParams(base, values = {}, meta = []) {
   const p = structuredClone(base);
   const allowed = new Set(meta.map((m) => m.key));
@@ -31,7 +31,7 @@ export function validateParams(p) {
   const errors = [];
   const tw = p.tactical.weights;
   if (Math.abs(tw.trend + tw.macro + tw.user - 1) > 1e-6) errors.push('Görüş ağırlıklarının toplamı 1 olmalı');
-  if (p.decision.band_min_pts > p.decision.band_max_pts) errors.push('Aralık en az, en çoktan büyük olamaz');
+  if (p.decision.yellow_rel_pct >= p.decision.red_rel_pct) errors.push('Kırmızı eşik sarıdan büyük olmalı');
   const fw = Object.values(p.fund_quality.weights).reduce((a, b) => a + b, 0);
   if (fw <= 0) errors.push('Fon puanı ağırlıklarından en az biri sıfırdan büyük olmalı');
   return errors;

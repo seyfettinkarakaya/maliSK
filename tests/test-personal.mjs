@@ -210,17 +210,19 @@ test('geçmişten sayma: bugün girilen dağılımda sayaç geçmişi kapsar', a
   assert.equal(m.due.active, true);
 });
 
-test('anında öneri: aralığın katı ve puan eşiği', async () => {
+test('kırmızı uyarı: hedefin yüzdesi kadar sapmada beklemeden öneri', async () => {
   const { recommendationDue } = await import('../src/app/personal.mjs');
-  const bands = { groups: { precious_metals: { value: 50, target: 35, width: 8.75, status: 'above' }, equity: { value: 22, target: 30, width: 7.5, status: 'below' } }, splits: {}, counters: { 'group:precious_metals': 2, 'group:equity': 3 } };
+  // Kıymetli maden 36 / hedef 30: sapma 6 (%20) → kırmızı. Hisse 26 / hedef 30: sapma 4 (%13) → sarı, teyit bekler.
+  const bands = { groups: { precious_metals: { value: 36, target: 30, width: 3, status: 'above' }, equity: { value: 26, target: 30, width: 3, status: 'below' } }, splits: {}, counters: { 'group:precious_metals': 2, 'group:equity': 3 } };
   const r = recommendationDue(bands, [], '2026-09-30', P);
-  assert.deepEqual(r.immediate, []); // 15 < 2 × 8,75; 8 < 2 × 7,5
-  assert.equal(r.active, false);
-  assert.deepEqual(r.pending.map((x) => x.left), [18, 17]);
-  const p5 = { ...P, decision: { ...P.decision, immediate_pts: 5 } };
+  assert.deepEqual(r.immediate, ['group:precious_metals']);
+  assert.equal(r.active, true);
+  assert.deepEqual(r.pending.map((x) => x.left), [17]);
+  // Küçük grupta da aynı ölçü: döviz 7 / hedef 10 → sapma %30 → kırmızı.
+  const fx = { groups: { fx: { value: 7, target: 10, width: 1, status: 'below' } }, splits: {}, counters: { 'group:fx': 1 } };
+  assert.deepEqual(recommendationDue(fx, [], '2026-09-30', P).immediate, ['group:fx']);
+  const p5 = { ...P, decision: { ...P.decision, red_rel_pct: 12 } };
   assert.deepEqual(recommendationDue(bands, [], '2026-09-30', p5).immediate, ['group:precious_metals', 'group:equity']);
-  const k15 = { ...P, decision: { ...P.decision, immediate_band_mult: 1.5 } };
-  assert.deepEqual(recommendationDue(bands, [], '2026-09-30', k15).immediate, ['group:precious_metals']);
   // "Şimdi değil" bekleme süresi.
   const sn = recommendationDue(bands, [{ date: '2026-09-25', action: 'reddedildi' }], '2026-09-30', p5);
   assert.equal(sn.suppressed, true);

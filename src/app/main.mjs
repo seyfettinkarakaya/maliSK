@@ -1,7 +1,8 @@
 // maliSK telefon arayüzü (Cüzdan tasarımı). Veri: data/latest.json; kişisel durum: localStorage + IndexedDB kopyası.
-import { DEFAULT_PARAMS, PARAM_META, CLASS_LABELS, CATEGORY_LABELS, GROUP_LABELS, PEER_LABELS } from '../model/params.mjs';
+import { DEFAULT_PARAMS, PARAM_META, PARAM_GROUPS, CLASS_LABELS, CATEGORY_LABELS, GROUP_LABELS, PEER_LABELS } from '../model/params.mjs';
 import { effectiveParams, validateParams, paramVersion, getPath } from '../model/paramedit.mjs';
 import { alertThreshold } from '../model/bands.mjs';
+import { tilt } from '../model/tactical.mjs';
 import { normalizeAnchor, classAnchor, managedClasses } from '../model/tree.mjs';
 import { backtest } from '../model/backtest.mjs';
 import { loadState, saveState, exportState, importState } from './state.mjs';
@@ -152,7 +153,7 @@ function groupStatus(m, g) {
   if (b.status !== 'inside') {
     const d = Math.abs(b.value - b.target);
     const now = m.due?.due.includes('group:' + g);
-    return now || n >= C ? { text: `${num(d, 1)} ${b.status === 'above' ? 'fazla' : 'eksik'}`, cls: 'neg' } : { text: `aralık dışı · öneriye ${C - n} gün`, cls: 'warnc' };
+    return now || n >= C ? { text: `${num(d, 1)} ${b.status === 'above' ? 'fazla' : 'eksik'}`, cls: 'neg' } : { text: `sarı · öneriye ${C - n} gün`, cls: 'warnc' };
   }
   if (spOut) return ns >= C || m.due?.due.includes('split:' + g) ? { text: 'grup içi pay dışı', cls: 'neg' } : { text: `grup içi pay · öneriye ${C - ns} gün`, cls: 'warnc' };
   return { text: 'dengede', cls: 'pos' };
@@ -231,8 +232,8 @@ function explain(key, m) {
     const d = P.decision;
     return {
       title: `${GROUP_LABELS[id]} aralığı`,
-      html: `<div class="formula">genişlik = hedef × %${d.band_rel_pct}, en az ${d.band_min_pts}, en çok ${d.band_max_pts} puan</div>`
-        + sheetTable([['Hedef', num(b.target, 2)], ['Genişlik', '±' + num(b.width, 2)], ['Aralık', `${num(b.low, 2)} – ${num(b.high, 2)}`], ['Şu an', num(b.value, 2)],
+      html: `<div class="formula">sarı: sapma ≥ hedef × %${d.yellow_rel_pct}<br>kırmızı: sapma ≥ hedef × %${d.red_rel_pct} → beklemeden öneri</div>`
+        + sheetTable([['Hedef', num(b.target, 2)], ['Sarı eşik', '±' + num(b.width, 2)], ['Normal aralık', `${num(b.low, 2)} – ${num(b.high, 2)}`], ['Kırmızı eşik', '±' + num(b.red, 2)], ['Şu an', `${num(b.value, 2)}${b.level ? ` · ${b.level === 'red' ? 'kırmızı' : 'sarı'}` : ''}`],
           ['Aralık dışında', `${m.bands.counters['group:' + id] || 0} iş günü (öneri ${d.confirm_days} günde)`]])
         + managedClasses(TREE, m.targets.anchor, id).map((c) => `<button class="btn" data-act="explain" data-key="expo:${c}">${CLASS_LABELS[c]} payı nasıl hesaplandı?</button>`).join('') + foot,
     };
@@ -829,18 +830,66 @@ function viewFirmalar(m) {
   return parts.join('');
 }
 
+// Ayar örnekleri: kullanıcının bugünkü hedefleriyle ve taslaktaki değerlerle hesaplanır.
+function paramExample(key, P, m) {
+  const d = P.decision;
+  const gt = Object.entries(m.targets?.group_targets || {}).sort((a, b) => b[1] - a[1]);
+  const [gid, t] = gt[0] || [null, 30];
+  const gl = gid ? GROUP_LABELS[gid] : 'Bir grup';
+  const small = gt.length > 1 ? gt[gt.length - 1] : null;
+  const rng = (tt, pct) => `%${num(tt * (1 - pct / 100), 1)}–${num(tt * (1 + pct / 100), 1)}`;
+  const fw = P.fund_quality.weights;
+  const fsum = Object.values(fw).reduce((x, y) => x + y, 0);
+  switch (key) {
+    case 'decision.yellow_rel_pct':
+      return `Örnek: ${gl} hedefin %${num(t, 0)} → ${rng(t, d.yellow_rel_pct)} arası normal.${small ? ` ${GROUP_LABELS[small[0]]} hedefin %${num(small[1], 0)} → ${rng(small[1], d.yellow_rel_pct)}.` : ''}`;
+    case 'decision.red_rel_pct':
+      return `Örnek: ${gl} %${num(t * (1 - d.red_rel_pct / 100), 1)} altına iner ya da %${num(t * (1 + d.red_rel_pct / 100), 1)} üstüne çıkarsa.`;
+    case 'decision.confirm_days':
+      return `Şu an yaklaşık ${num(d.confirm_days / 21, 1)} ay.`;
+    case 'decision.split_band_pts': {
+      const sp = m.targets?.groups?.precious_metals?.splits;
+      let g = sp && Object.entries(sp).sort((a, b) => b[1] - a[1])[0];
+      if (!g || g[1] >= 99) g = ['gold', 70];
+      return g ? `Örnek: kıymetli madende ${CLASS_LABELS[g[0]].toLocaleLowerCase('tr-TR')} hedefi %${num(g[1], 0)} → payı %${num(Math.max(0, g[1] - d.split_band_pts), 0)}–${num(Math.min(100, g[1] + d.split_band_pts), 0)} arası normal.` : '';
+    }
+    case 'decision.fund_top_n':
+      return `Örnek: 11 fonluk grupta ${d.fund_top_n + 1}. sıradaki fon zayıf sayılır.`;
+    case 'decision.switch_score_gap':
+      return d.switch_score_gap > 1 ? `Örnek: senin fonun 60, en iyisi ${60 + d.switch_score_gap + 1} → fark ${d.switch_score_gap + 1}, öneri gelir. En iyisi ${60 + d.switch_score_gap - 1} olsaydı gelmezdi.` : '';
+    case 'tactical.max_tilt_pts':
+      return `Örnek: ${gl.toLocaleLowerCase('tr-TR')} çapan %${num(t, 0)} ise görüşe göre hedef %${num(t - P.tactical.max_tilt_pts, 1)}–${num(t + P.tactical.max_tilt_pts, 1)} arasında olur.`;
+    case 'tactical.full_tilt_at':
+      return `Örnek: S = 0,25 iken hedef ${num(Math.abs(tilt(0.25, P.tactical)), 1)} puan, S = ${num(P.tactical.full_tilt_at, 2)} ve üstünde ${num(P.tactical.max_tilt_pts, 1)} puan kayar.`;
+    case 'tactical.weights.user': {
+      const w = P.tactical.weights;
+      return `Şu an toplam ${num(w.trend + w.macro + w.user, 2)}.`;
+    }
+    case 'decision.alert_sigma_mult': {
+      const v = m.latest.classes?.gold?.vol_annual_pct;
+      return v ? `Bugün altın için yaklaşık %${num(alertThreshold(v, d), 1)} düşüşte uyarır.` : '';
+    }
+    default:
+      if (key.startsWith('fund_quality.weights.')) return fsum > 0 ? `Puandaki payı %${num((fw[key.split('.').pop()] * 100) / fsum, 0)}.` : '';
+      return '';
+  }
+}
+
 function viewParametreler(m) {
   if (!ui.paramDraft) ui.paramDraft = { ...(state.params.values || {}) };
   const eff = effectiveParams(DEFAULT_PARAMS, ui.paramDraft, PARAM_META);
   const errors = validateParams(eff);
   const fmtv = (meta, v) => (meta.step < 1 && meta.step !== 0.5 ? num(v, 2) : num(v, meta.step % 1 ? 1 : 0));
   const parts = [back(backLabel()), title('Model ayarları', `Sürüm ${m.param_version} · değişiklikler telefonda hesaplanır`)];
-  for (const g of [...new Set(PARAM_META.map((x) => x.group))]) {
-    parts.push(`<div class="label">${g}</div><div class="group">${PARAM_META.filter((x) => x.group === g).map((meta) => {
+  for (const [gk, g] of Object.entries(PARAM_GROUPS)) {
+    const items = PARAM_META.filter((x) => x.group === gk);
+    if (!items.length) continue;
+    parts.push(`<div class="label">${esc(g.title)}</div>${g.note ? `<p class="note ptop">${esc(g.note)}</p>` : ''}<div class="group">${items.map((meta) => {
       const v = getPath(eff, meta.key);
       const def = getPath(DEFAULT_PARAMS, meta.key);
-      return `<div class="row"><span class="l"><b style="font-weight:700;font-size:1rem">${meta.label}</b><small>${v !== def ? `varsayılan ${fmtv(meta, def)}` : meta.unit}</small></span>
-        <div class="stepper"><button data-act="pstep" data-key="${meta.key}" data-d="-1" aria-label="Azalt">−</button><input readonly value="${fmtv(meta, v)}" class="${v !== def ? 'pos' : ''}" aria-label="${meta.label}"><button data-act="pstep" data-key="${meta.key}" data-d="1" aria-label="Artır">+</button></div></div>`;
+      const ex = paramExample(meta.key, eff, m);
+      return `<div class="prow"><b>${esc(meta.label)}</b>${meta.help ? `<small>${esc(meta.help)}</small>` : ''}${ex ? `<small class="ex">${esc(ex)}</small>` : ''}
+        <div class="pctl"><span class="mut">${v !== def ? `varsayılan ${fmtv(meta, def)}` : ''} ${esc(meta.unit)}</span><div class="stepper"><button data-act="pstep" data-key="${meta.key}" data-d="-1" aria-label="Azalt">−</button><input readonly value="${fmtv(meta, v)}" class="${v !== def ? 'pos' : ''}" aria-label="${esc(meta.label)}"><button data-act="pstep" data-key="${meta.key}" data-d="1" aria-label="Artır">+</button></div></div></div>`;
     }).join('')}</div>`);
   }
   if (errors.length) parts.push(`<p class="note neg">${errors.map(esc).join(' · ')}</p>`);

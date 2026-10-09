@@ -67,13 +67,17 @@ test('Test 5: önerilen dağılımın maruziyeti ve ücreti', () => {
   near(weightedFee(w, fees), 1.3, 0.005, 'ücret');
 });
 
-test('Test 6: bant kontrolü (göreli bant, sürüm 2.1)', () => {
+test('Test 6: bant kontrolü (sarı eşik hedefin yüzdesi, sürüm 2.7)', () => {
   const e = portfolioExposure({ KJM: 30, KGC: 20, AGA: 20, AGH: 10, KRM: 20 }, exposures);
   const targets = { gold: 35, silver: 5, tl_fixed: 30, equity_tr: 20, equity_foreign: 10 };
   const st = (d) => Object.fromEntries(Object.entries(bandCheck(e, targets, d)).map(([c, r]) => [c, r.status]));
-  // Göreli bant: Yabancı hisse (4,8) artık 7–13 bandının altında.
-  assert.deepEqual(st(P.decision), { gold: 'above', silver: 'above', tl_fixed: 'below', equity_tr: 'inside', equity_foreign: 'below' });
-  // Spesifikasyon 2.0'daki sabit ±10 bant: Yabancı hisse içinde kalıyordu.
-  const old = { ...P.decision, band_min_pts: 10, band_max_pts: 10 };
-  assert.deepEqual(st(old), { gold: 'above', silver: 'above', tl_fixed: 'below', equity_tr: 'inside', equity_foreign: 'inside' });
+  // Sarı %10: Yurtiçi hisse (17,3) 18–22 aralığının altında.
+  assert.deepEqual(st(P.decision), { gold: 'above', silver: 'above', tl_fixed: 'below', equity_tr: 'below', equity_foreign: 'below' });
+  // Sarı %25: Yurtiçi hisse 15–25 içinde, Yabancı hisse (4,8) 7,5–12,5 altında.
+  const wide = { ...P.decision, yellow_rel_pct: 25, red_rel_pct: 50 };
+  assert.deepEqual(st(wide), { gold: 'above', silver: 'above', tl_fixed: 'below', equity_tr: 'inside', equity_foreign: 'below' });
+  // Seviye: Yurtiçi hisse sapması 2,7 < kırmızı 4 → sarı; Altın sapması 11 ≥ 7 → kırmızı.
+  const lv = bandCheck(e, targets, P.decision);
+  assert.equal(lv.equity_tr.level, 'yellow');
+  assert.equal(lv.gold.level, 'red');
 });
