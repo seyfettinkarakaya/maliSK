@@ -1,4 +1,4 @@
-# maliSK modeli — sürüm 2.4
+# maliSK modeli — sürüm 2.5
 
 **Tarih:** 9 Ekim 2026 · **Sahibi:** Seyfettin · Kaynak: BES Fon Danışmanı spesifikasyonu 2.0
 ve 7–8 Ekim 2026 tarihli model görüşmelerindeki kararlar (en altta değişiklik günlüğü).
@@ -105,7 +105,10 @@ değeri olmayan sınıf izlenir.
 
 ## 6. Katman 2 — fon puanı
 
-Akran grubu kategoridir. En az 12 aylık geçmiş gerekir; daha kısa fon "Yeni fon" olur,
+**Akran grubu** kategoridir. Bir akran ailesindeki kategorilerden birinde 5'ten az (`min_peers`) puanlanabilir
+fon varsa ailenin bütün kategorileri tek akran grubunda puanlanır ve sıralanır (medyanlar, süreklilik,
+sıra). Aileler: Altın ve gümüş (altın, gümüş, kıymetli maden), Kira ve para piyasası (kira sertifikası,
+para piyasası). Ailedeki kategorilerin hepsi pasifse risk bileşeni izleme hatasıdır. En az 12 aylık geçmiş gerekir; daha kısa fon "Yeni fon" olur,
 puanlanmaz, en çok %5 ağırlık alır.
 
 `Q = 100 · Σ_j w_j c_j / Σ_j w_j` (yalnız hesaplanabilen bileşenler)
@@ -165,14 +168,20 @@ puanlanmaz, en çok %5 ağırlık alır.
 
 ### 8.2 Fon sinyali (aralıktan ve şirketten bağımsız; tüm BES evreni)
 
-- **Sıra:** fon, kendi kategorisindeki helal ve puanlı fonlar arasında puana göre sıralanır.
-- **Zayıf:** kategorisinde ilk N'de (N = 3) olmayan fon için hemen uyarı; ilk N fon gösterilir.
-- **Değiştir:** zayıf fonun puanı kategorinin 1.'sinden ≥ 10 puan düşükse "X yerine 1." önerilir; pay
-  olduğu gibi geçer. Lider adayı: helal, puanlı, riskli bayrağı (helal uyarısı, dönüşüm, strateji kayması,
+- **Sıra:** fon, kendi akran grubundaki (Bölüm 6) helal ve puanlı fonlar arasında puana göre sıralanır.
+- **Zayıf:** akran grubunda ilk N'de (N = 3) olmayan fon için hemen uyarı; ilk N fon gösterilir.
+- **Değiştir:** zayıf fonun puanı akran grubunun en iyisinden ≥ 10 puan düşükse "X yerine o fon" önerilir;
+  pay olduğu gibi geçer. Akran grubu bir aileyse en iyi, aynı ana sınıftaki fonlar arasından seçilir
+  (gümüş fonu gümüş fonuna, altın ağırlıklı fon altın ağırlıklı fona); fon türünün en iyisiyse yalnız
+  zayıf uyarısı kalır. Lider adayı: helal, puanlı, riskli bayrağı (helal uyarısı, dönüşüm, strateji kayması,
   şüpheli veri) olmayan, kullanıcının seçebileceği fon.
-- **Riskli fon:** tutulan fon helal dışına çıkarsa "çık, yerine kategorinin 1.'si" (beklemesiz, "şimdi
+- **Riskli fon:** tutulan fon helal dışına çıkarsa "çık, yerine aynı türün en iyisi" (beklemesiz, "şimdi
   değil"den etkilenmez); dönüşüm, strateji kayması ya da şüpheli veride uyarı.
 - **Yeni fon:** puanı olmayan fon sıralanmaz, önerilmez; tutuluyorsa bilgi verilir.
+- **Ümit vaat eden (yalnız bilgi):** geçmişi 12–36 ay arasında, riskli bayrağı olmayan, kullanıcının
+  seçebileceği fonlardan ham puanı (kısa geçmiş düzeltmesinden önce) akran grubunda ilk 3'te
+  (`promising_top_n`) ya da 70 ve üstünde (`promising_min_raw`) olanlar ayrı listede gösterilir.
+  12 aydan kısa geçmişli yeni fonlar aynı yerde "izlemede" durur. Bu liste öneri üretmez.
 
 ### 8.3 Öneri
 
@@ -229,6 +238,14 @@ Ek A'daki 8 fonla, yılbaşı = 9 ay:
   fazla getiri.
 - Hak sayacı, Google Sheet, TL tutar ve XIRR ilk sürümden çıkarıldı. Ledoit-Wolf kapalı (Ö2).
 - Çapada olmayan sınıf izlenir (kullanıcı onayladı, 8 Ekim 2026).
+
+### 2.4 → 2.5 (9 Ekim 2026, kullanıcı onayı)
+
+- Akran ailesi: az fonlu kategoriler (gümüş, kıymetli maden, para piyasası) ailesiyle birlikte
+  puanlanır ve sıralanır; değiştir önerisi aynı ana sınıftaki en iyi fona gider.
+- Ümit vaat eden fonlar listesi (yalnız bilgi) ve izlemedeki yeni fonlar.
+- Öneride kategori 1.'si, yalnız içinde fon tutulmayan kategoride aday olur; tutulan fonun yerine
+  geçmek yalnız fon sinyaliyle olur.
 
 ### 2.3 → 2.4 (9 Ekim 2026, kullanıcı onayı)
 

@@ -2,7 +2,7 @@
 // DOM ve ağ erişimi yok; latest.json ve kişisel durum girdi olarak gelir.
 import { DEFAULT_PARAMS, PARAM_META } from '../model/params.mjs';
 import { effectiveParams, paramVersion } from '../model/paramedit.mjs';
-import { applyParams, combineContracts, currentExposure, targetsToday, bandHistory, recommendationDue, buildProposal, contractSteps, migrateState, fundSignals } from './personal.mjs';
+import { applyParams, combineContracts, currentExposure, targetsToday, bandHistory, recommendationDue, buildProposal, contractSteps, migrateState, fundSignals, promisingFunds } from './personal.mjs';
 
 export function compute(latestRaw, stateIn, { withProposal = false } = {}) {
   const state = migrateState(stateIn);
@@ -18,6 +18,7 @@ export function compute(latestRaw, stateIn, { withProposal = false } = {}) {
     m.expoNow = currentExposure(latest, m.drift.current);
   }
   if (anchor) m.targets = targetsToday(latest, anchor, state.views || {}, P, m.expoNow || null);
+  m.promising = promisingFunds(latest, P);
   if (m.drift) m.funds = fundSignals(latest, m.drift.current, P);
   if (m.drift && m.targets) {
     m.bands = bandHistory(latest, m.drift, m.targets, P);
@@ -62,7 +63,7 @@ export function dailyNotice(m, groupLabels, classLabels) {
     return { title: `Acil uyarı: ${classLabels[c]}`, body: `20 iş gününde %${Math.abs(v.alert.change_pct).toFixed(1).replace('.', ',')} düştü. İnceleme çağrısı, öneri değil.`, tag: 'malisk-uyari' };
   }
   const watch = [];
-  if (m.funds?.weak.length) watch.push(`${m.funds.weak.length} fon kategorisinde ilk ${m.P.decision.fund_top_n}’te değil`);
+  if (m.funds?.weak.length) watch.push(`${m.funds.weak.length} fon akran grubunda ilk ${m.P.decision.fund_top_n}’te değil`);
   if (m.due?.pending.length) {
     const p = m.due.pending.sort((a, b) => a.left - b.left)[0];
     const [kind, id] = p.key.split(':');

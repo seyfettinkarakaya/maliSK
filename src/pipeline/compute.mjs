@@ -3,7 +3,7 @@
 import { CLASSES, CLASS_LABELS, CATEGORY_LABELS } from '../model/params.mjs';
 import { categoryFromName, fundExposure, mainClass, halalCheck } from '../model/exposure.mjs';
 import { periodIndex, longTermIndex, ytdMonths } from '../model/indices.mjs';
-import { periodConsistency, scoreCategory, median, hygiene } from '../model/scoring.mjs';
+import { periodConsistency, scoreCategory, median, hygiene, peerGroups } from '../model/scoring.mjs';
 import { trendScore } from '../model/tactical.mjs';
 import { checkAlert } from '../model/bands.mjs';
 import { covariance, anchorSuggestion, suggestGroups, correlation } from '../model/riskparity.mjs';
@@ -13,7 +13,7 @@ import {
   sampleEvery, monthlyReturns, shiftDays, shiftMonths,
 } from './series.mjs';
 
-export const MODEL_VERSION = '2.4';
+export const MODEL_VERSION = '2.5';
 const RISKY = ['gold', 'silver', 'equity_tr', 'equity_foreign', 'fx_fixed'];
 const PERIODS = ['1m', '3m', '6m', 'ytd', '1y', '3y', '5y'];
 const TAIL_DAYS = 130;
@@ -223,10 +223,14 @@ export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }
     };
   }
 
-  // 6. Kategori içi puan.
+  // 6. Akran grubu içi puan: kategori; ailede küçük kategori varsa aile (docs/model.md, Bölüm 6).
+  const scorable = Object.fromEntries(Object.entries(byCategory).filter(([c]) => c !== 'unclassified')
+    .map(([c, l]) => [c, l.filter((f) => metrics[f.code].history_months >= fq.min_history_months).length]));
+  const peerOf = peerGroups(scorable, fq.peer_families, fq.min_peers);
+  const byPeer = {};
+  for (const c of Object.keys(scorable)) (byPeer[peerOf[c]] ||= []).push(...byCategory[c]);
   const scores = {};
-  for (const [cat, list] of Object.entries(byCategory)) {
-    if (cat === 'unclassified') continue;
+  for (const list of Object.values(byPeer)) {
     const peers = list.map((f) => ({ code: f.code, returns: metrics[f.code].excess }));
     const monthsKeys = [...new Set(list.flatMap((f) => Object.keys(metrics[f.code].monthly_excess)))].sort().slice(-12);
     const monthMedian = Object.fromEntries(monthsKeys.map((m) => [m, median(list.map((f) => metrics[f.code].monthly_excess[m]))]));
@@ -245,8 +249,9 @@ export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }
         fee: f.fee, hygiene: hygiene(f.fee, f.max_ter, size, fq.small_fund_tl),
       };
     });
-    for (const r of scoreCategory(rows, { passive: U.passive_categories.includes(cat), params })) scores[r.code] = r;
-    const ranked = Object.values(scores).filter((s) => list.some((f) => f.code === s.code) && s.score !== null).sort((x, y) => y.score - x.score);
+    const passive = list.every((f) => U.passive_categories.includes(f.category));
+    for (const r of scoreCategory(rows, { passive, params })) scores[r.code] = r;
+    const ranked = list.map((f) => scores[f.code]).filter((s) => s.score !== null).sort((x, y) => y.score - x.score);
     ranked.forEach((s, i) => { s.rank = i + 1; s.peers = ranked.length; });
   }
 
@@ -302,6 +307,7 @@ export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }
           code: f.code,
           name: f.name,
           category: f.category,
+          peer_group: peerOf[f.category] ?? f.category,
           halal: f.halal,
           halal_reason: f.halal_reason,
           halal_basis: f.halal_basis,

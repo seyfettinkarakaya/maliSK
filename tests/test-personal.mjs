@@ -245,3 +245,43 @@ test('fon sinyali: zayıf, değiştir, riskli; öneri yalnız fon değişikliği
   const p = buildProposal(latest, { GLD: 30, GL4: 20, MMF: 50 }, { class_out: {}, exposure: {} }, { gold: 50, tl_fixed: 50 }, P, { switches: s30.switches, rebalance: false });
   assert.deepEqual(p.weights, { GLD: 30, MMF: 50, GL2: 20 });
 });
+
+test('akran grubu: az fonlu kategori ailesiyle birleşir; değiştir aynı türe gider', async () => {
+  const { peerGroups } = await import('../src/model/scoring.mjs');
+  const { fundSignals, applyParams, promisingFunds } = await import('../src/app/personal.mjs');
+  const fam = P.fund_quality.peer_families;
+  assert.deepEqual(peerGroups({ gold: 7, silver: 2, precious_metals: 2, lease_tl: 8, money_market: 1, equity: 9 }, fam, 5),
+    { gold: 'metals_family', silver: 'metals_family', precious_metals: 'metals_family', lease_tl: 'tl_family', money_market: 'tl_family', equity: 'equity' });
+  assert.deepEqual(peerGroups({ gold: 7, silver: 2 }, fam, 1), { gold: 'gold', silver: 'silver' });
+
+  const f = (code, category, main, score, extra = {}) => ({
+    code, category, peer_group: 'metals_family', halal: true, main_class: main, exposure: expo({ [main]: 100 }),
+    score, raw_score: score, history_months: 60, flags: [], ...extra,
+  });
+  const latest = applyParams({
+    ...market(),
+    funds: [
+      f('G1', 'gold', 'gold', 80), f('G2', 'gold', 'gold', 60), f('S1', 'silver', 'silver', 70), f('S2', 'silver', 'silver', 40),
+      f('Y1', 'gold', 'gold', 68, { raw_score: 88, history_months: 17 }),
+      f('Y2', 'gold', 'gold', 55, { raw_score: 60, history_months: 20 }),
+      f('N1', 'gold', 'gold', null, { raw_score: null, history_months: 8, flags: ['yeni_fon'] }),
+      f('N2', 'gold', 'gold', null, { raw_score: null, history_months: 3, flags: ['yeni_fon', 'strateji_kaymasi'] }),
+    ],
+  }, P);
+  const s2 = latest.funds.find((x) => x.code === 'S2');
+  assert.equal(s2.peers, 6);
+  assert.equal(s2.rank, 6);
+  const s = fundSignals(latest, { S2: 50, G1: 50 }, P);
+  // S2 grupta 6.; grubun 1.'si altın G1, ama öneri gümüşün en iyisi S1'e.
+  assert.deepEqual(s.switches.map((x) => [x.from, x.to]), [['S2', 'S1']]);
+  assert.match(s.switches[0].reason, /aynı türün en iyisi S1/);
+
+  const pr = promisingFunds(latest, P);
+  // Y1: 17 ay, ham 88 (ham sırada 1.) → ümit vaat eden. Y2: ham 60, ham sırada 5. → değil. G1: 60 ay → olgun.
+  assert.deepEqual(pr.promising.map((x) => x.code), ['Y1']);
+  assert.equal(pr.promising[0].raw_rank, 1);
+  // N1 izlemede; N2 riskli bayraklı → dışarıda.
+  assert.deepEqual(pr.watch.map((x) => x.code), ['N1']);
+  const loose = promisingFunds(latest, { ...P, fund_quality: { ...P.fund_quality, promising_top_n: 5 } });
+  assert.deepEqual(loose.promising.map((x) => x.code), ['Y1', 'Y2']);
+});

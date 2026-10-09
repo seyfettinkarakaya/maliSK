@@ -37,6 +37,13 @@ export const CATEGORY_LABELS = {
   unclassified: 'Sınıflandırılmamış',
 };
 
+// Akran ailesi (docs/model.md, Bölüm 6): ailedeki bir kategoride min_peers'ten az puanlı fon varsa
+// ailenin kategorileri tek akran grubunda puanlanır ve sıralanır.
+export const PEER_LABELS = {
+  metals_family: 'Altın ve gümüş',
+  tl_family: 'Kira ve para piyasası',
+};
+
 export const DEFAULT_PARAMS = {
   version: 2,
   general: {
@@ -177,6 +184,12 @@ export const DEFAULT_PARAMS = {
     new_fund_cap_pct: 5,
     full_confidence_months: 36, // Ö1
     min_peers_per_period: 3,
+    min_peers: 5,
+    peer_families: { metals_family: ['gold', 'silver', 'precious_metals'], tl_family: ['lease_tl', 'money_market'] },
+    // Ümit vaat eden: geçmişi min_history_months ile full_confidence_months arasında, ham puanı akran grubunda
+    // ilk promising_top_n'de ya da promising_min_raw ve üstünde. Yalnız bilgi; öneri üretmez.
+    promising_top_n: 3,
+    promising_min_raw: 70,
     small_fund_tl: 500e6,
     warming_pct: 20,
     drift_pts: 15,
@@ -223,8 +236,10 @@ export const PARAM_META = [
   { key: 'decision.immediate_band_mult', group: 'Öneri', label: 'Anında öneri: aralığın katı', unit: '×', min: 1, max: 5, step: 0.25 },
   { key: 'decision.immediate_pts', group: 'Öneri', label: 'Anında öneri: sapma puanı (0 = kapalı)', unit: 'puan', min: 0, max: 30, step: 0.5 },
   { key: 'decision.snooze_days', group: 'Öneri', label: '“Şimdi değil” sonrası bekleme', unit: 'iş günü', min: 1, max: 60, step: 1 },
-  { key: 'decision.fund_top_n', group: 'Fon sinyali', label: 'Zayıf: kategorisinde ilk kaçta değilse', unit: 'sıra', min: 1, max: 10, step: 1 },
+  { key: 'decision.fund_top_n', group: 'Fon sinyali', label: 'Zayıf: akran grubunda ilk kaçta değilse', unit: 'sıra', min: 1, max: 10, step: 1 },
   { key: 'decision.switch_score_gap', group: 'Fon sinyali', label: 'Değiştir: 1.’den puan farkı', unit: 'puan', min: 0, max: 50, step: 1 },
+  { key: 'fund_quality.promising_top_n', group: 'Fon sinyali', label: 'Ümit vaat eden: ham puanla ilk kaçta', unit: 'sıra', min: 1, max: 10, step: 1 },
+  { key: 'fund_quality.promising_min_raw', group: 'Fon sinyali', label: 'Ümit vaat eden: ya da ham puan en az', unit: 'puan', min: 50, max: 100, step: 1 },
   { key: 'fund_quality.new_fund_cap_pct', group: 'Öneri', label: 'Yeni fon tavanı', unit: '%', min: 0, max: 20, step: 1 },
   { key: 'allocation.no_instrument_pts', group: 'Öneri', label: '“Uygun araç yok” eşiği', unit: 'puan', min: 1, max: 10, step: 0.5 },
   { key: 'tactical.max_tilt_pts', group: 'Görüş', label: 'Görüşün en büyük etkisi', unit: 'puan', min: 0, max: 15, step: 0.5 },

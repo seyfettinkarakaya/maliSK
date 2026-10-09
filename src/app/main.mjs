@@ -1,12 +1,12 @@
 // maliSK telefon arayüzü (Cüzdan tasarımı). Veri: data/latest.json; kişisel durum: localStorage + IndexedDB kopyası.
-import { DEFAULT_PARAMS, PARAM_META, CLASS_LABELS, CATEGORY_LABELS, GROUP_LABELS } from '../model/params.mjs';
+import { DEFAULT_PARAMS, PARAM_META, CLASS_LABELS, CATEGORY_LABELS, GROUP_LABELS, PEER_LABELS } from '../model/params.mjs';
 import { effectiveParams, validateParams, paramVersion, getPath } from '../model/paramedit.mjs';
 import { alertThreshold } from '../model/bands.mjs';
 import { normalizeAnchor, classAnchor, managedClasses } from '../model/tree.mjs';
 import { backtest } from '../model/backtest.mjs';
 import { loadState, saveState, exportState, importState } from './state.mjs';
 import { compute, dailyNotice } from './engine.mjs';
-import { currentExposure, migrateState, ANCHOR_CLASSES, fundIndex } from './personal.mjs';
+import { currentExposure, migrateState, ANCHOR_CLASSES, fundIndex, peerOf } from './personal.mjs';
 import { parseAllocationTable } from './importer.mjs';
 import { buildPrompt, buildFundPrompt } from './claude.mjs';
 import { idbSet } from './idb.mjs';
@@ -175,6 +175,9 @@ function trendSentence(cls) {
 
 const grade = (v) => (v === null || v === undefined ? ['—', 'mut'] : v >= 0.65 ? ['Çok iyi', 'pos'] : v >= 0.55 ? ['İyi', 'pos'] : v >= 0.45 ? ['Orta', 'warnc'] : ['Zayıf', 'neg']);
 
+// Akran grubunun adı: aile ise aile adı, değilse kategori adı.
+const peerName = (f) => PEER_LABELS[peerOf(f)] || CATEGORY_LABELS[f.category] || '';
+
 function fundReason(f, P) {
   if (f.score === null) return f.flags.includes('yeni_fon') ? 'Yeni fon · henüz puanı yok' : 'Puanı hesaplanamadı';
   const c = f.components || {};
@@ -274,8 +277,8 @@ function explain(key, m) {
     const names = { consistency: 'İstikrar', excess_index: 'Fazla getiri', risk: passive ? 'İzleme hatası' : 'Düşüş riski', cost: 'Ücret', hygiene: 'Düzen' };
     return {
       title: `${esc(f.code)} puanı`,
-      html: '<div class="formula">puan = 100 × Σ ağırlık × bileşen / Σ ağırlık<br>bileşen = 0,5 + (değer − kategori medyanı) / (2 × ölçek)<br>puan = 50 + güven × (ham − 50)</div>'
-        + sheetTable([...Object.keys(w).map((k) => [names[k], c[k] === null || c[k] === undefined ? 'veri yok' : `${num(w[k], 2)} × ${num(c[k], 3)}`]), ['Ham puan', num(f.raw_score, 1)], ['Güven (geçmiş / 36 ay)', `${num(f.history_months, 0)} ay → %${num((f.confidence ?? 1) * 100, 0)}`]], ['Puan', num(f.score, 1)]) + foot,
+      html: '<div class="formula">puan = 100 × Σ ağırlık × bileşen / Σ ağırlık<br>bileşen = 0,5 + (değer − akran grubu medyanı) / (2 × ölçek)<br>puan = 50 + güven × (ham − 50)</div>'
+        + sheetTable([...Object.keys(w).map((k) => [names[k], c[k] === null || c[k] === undefined ? 'veri yok' : `${num(w[k], 2)} × ${num(c[k], 3)}`]), ['Akran grubu', `${esc(peerName(f))} · ${f.peers} fon`], ['Ham puan', num(f.raw_score, 1)], ['Güven (geçmiş / 36 ay)', `${num(f.history_months, 0)} ay → %${num((f.confidence ?? 1) * 100, 0)}`]], ['Puan', num(f.score, 1)]) + foot,
     };
   }
   if (kind === 'alert') {
@@ -351,7 +354,7 @@ function viewOzet(m) {
     const fund = fs.switches.length ? [`${fs.switches.length} fon değişikliği`, 'neg'] : fs.weak.length ? [`${fs.weak.length} fon ilk ${m.P.decision.fund_top_n}’te değil`, 'warnc'] : [fs.good.length ? `Hepsi ilk ${m.P.decision.fund_top_n}’te` : 'puanlı fon yok', fs.good.length ? 'pos' : 'mut'];
     parts.push(`<div class="label">Sinyaller</div><div class="group">
       <button class="row" data-act="go" data-kind="${d.due.length || pend ? 'dengele' : 'dagilim'}"><span class="l"><b>Dağılım</b><small>aralık dışı ${d.due.length + d.pending.length} grup · teyit ${C} iş günü</small></span><span class="r"><span class="num ${alloc[1]}" style="font-size:1rem">${alloc[0]}</span>${chev()}</span></button>
-      <button class="row" data-act="go" data-kind="fonsinyal"><span class="l"><b>Fonlar</b><small>kategorisinde sıra · tüm BES</small></span><span class="r"><span class="num ${fund[1]}" style="font-size:1rem">${fund[0]}</span>${chev()}</span></button></div>`);
+      <button class="row" data-act="go" data-kind="fonsinyal"><span class="l"><b>Fonlar</b><small>akran grubunda sıra · tüm BES</small></span><span class="r"><span class="num ${fund[1]}" style="font-size:1rem">${fund[0]}</span>${chev()}</span></button></div>`);
   }
   if (m.drift) {
     const vals = rangeSlice(m.drift.series.map((p) => p.value), ui.range);
@@ -466,7 +469,7 @@ function viewGrup(m, g) {
 
 // ---------- Fon sinyali ----------
 function viewFonSinyal(m) {
-  const parts = [back(backLabel()), title('Fonlarım', `Kategorisindeki sıraya göre · tüm BES · ilk ${m.P.decision.fund_top_n} iyi`)];
+  const parts = [back(backLabel()), title('Fonlarım', `Akran grubundaki sıraya göre · tüm BES · ilk ${m.P.decision.fund_top_n} iyi`)];
   if (!m.funds) return parts.join('') + noData();
   const funds = fundIndex(m.latest);
   const sw = Object.fromEntries(m.funds.switches.map((x) => [x.from, x]));
@@ -479,15 +482,15 @@ function viewFonSinyal(m) {
   const rows = order.map(([code, w]) => {
     const f = funds[code];
     let st = ['iyi', 'pos'];
-    let sub = f && f.score !== null ? `${esc(CATEGORY_LABELS[f.category] || '')} · ${f.peers} fonda ${f.rank}.` : 'puanı yok';
+    let sub = f && f.score !== null ? `${esc(peerName(f))} · ${f.peers} fonda ${f.rank}.` : 'puanı yok';
     if (risk[code]) st = [risk[code].text, 'neg'];
     if (sw[code]) { st = [`→ ${sw[code].to}`, 'neg']; sub = esc(sw[code].reason); }
-    else if (weak[code]) { st = [`${weak[code].rank}.`, 'warnc']; sub = `ilk ${m.P.decision.fund_top_n}: ${weak[code].top.map((x) => `${esc(x.code)} ${num(x.score, 0)}`).join(' · ')}`; }
+    else if (weak[code]) { st = [`${weak[code].rank}.`, 'warnc']; sub = `${weak[code].best_of_kind ? 'türünün en iyisi · ' : ''}ilk ${m.P.decision.fund_top_n}: ${weak[code].top.map((x) => `${esc(x.code)} ${num(x.score, 0)}`).join(' · ')}`; }
     else if (f && f.score === null) st = ['yeni', 'mut'];
     return `<button class="row" data-act="go" data-kind="fon" data-code="${esc(code)}"><span class="l" style="flex:1"><b>${esc(code)} <span class="mut" style="font-weight:700;font-size:.9rem">%${num(w, 0)}</span></b><small>${sub}</small></span><span class="r"><span class="num ${st[1]}" style="font-size:1rem">${st[0]}</span>${chev()}</span></button>`;
   }).join('');
   parts.push(`<div style="height:.8rem"></div><div class="group">${rows}</div>`);
-  parts.push(`<p class="note">Zayıf: kategorisinde ilk ${m.P.decision.fund_top_n}’te değil. Değiştir: kategorinin 1.’sinden en az ${m.P.decision.switch_score_gap} puan geride. Eşikler Ayarlar → Model ayarları’nda.</p>`);
+  parts.push(`<p class="note">Sıra akran grubunda: kendi kategorisi; az fonlu kategorilerde aynı varlık ailesi (Altın ve gümüş · Kira ve para piyasası). Zayıf: ilk ${m.P.decision.fund_top_n}’te değil. Değiştir: aynı türün en iyisinden en az ${m.P.decision.switch_score_gap} puan geride. Eşikler Ayarlar → Model ayarları’nda.</p>`);
   if (m.funds.switches.length) parts.push('<div class="btns"><button class="btn primary" data-act="go" data-kind="dengele">Değişiklikleri gör</button></div>');
   return parts.join('');
 }
@@ -616,20 +619,40 @@ function viewPaylar(m) {
 // ---------- Fonlar ----------
 function viewFonlar(m) {
   const helal = m.latest.funds.filter((f) => f.halal);
-  const cats = CATEGORY_ORDER.filter((c) => helal.some((f) => f.category === c));
-  if (!ui.category) ui.category = cats[0];
+  const groups = [...new Set(CATEGORY_ORDER.flatMap((c) => helal.filter((f) => f.category === c).map(peerOf)))];
+  const pr = m.promising || { promising: [], watch: [] };
+  const keys = ['promising', ...groups, 'nonhalal'];
+  if (!keys.includes(ui.category)) ui.category = groups[0];
   const mine = m.drift?.current || {};
   const parts = [title('Fonlar', `${helal.length} helal fon · ${helal.filter((f) => f.score !== null).length} puanlı`)];
-  parts.push(`<div class="pillrow">${[...cats.map((c) => [c, CATEGORY_LABELS[c] || c]), ['nonhalal', 'Helal dışı']].map(([k, l]) => `<button data-act="cat" data-cat="${k}" class="${ui.category === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>`);
+  const label = (k) => (k === 'promising' ? `Ümit vaat eden${pr.promising.length ? ` · ${pr.promising.length}` : ''}` : k === 'nonhalal' ? 'Helal dışı' : PEER_LABELS[k] || CATEGORY_LABELS[k] || k);
+  parts.push(`<div class="pillrow">${keys.map((k) => `<button data-act="cat" data-cat="${k}" class="${ui.category === k ? 'on' : ''}">${esc(label(k))}</button>`).join('')}</div>`);
   if (ui.category === 'nonhalal') {
     parts.push(`<div class="label">Faizli araç ya da strateji değişimi</div><div class="group">${m.latest.funds.filter((f) => !f.halal).map((f) => `<button class="row" data-act="go" data-kind="fon" data-code="${esc(f.code)}"><span class="l"><b>${esc(f.code)}</b><small>${esc(f.halal_reason || '')}</small></span>${chev()}</button>`).join('')}</div>`);
     return parts.join('');
   }
-  const list = helal.filter((f) => f.category === ui.category).sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.code.localeCompare(b.code));
-  parts.push(`<div class="label">Puana göre · 50 kategori ortası</div><div class="group">${list.map((f) => `<button class="row" data-act="go" data-kind="fon" data-code="${esc(f.code)}">
+  if (ui.category === 'promising') return parts.join('') + promisingList(m, pr, mine);
+  const family = !!PEER_LABELS[ui.category];
+  const list = helal.filter((f) => peerOf(f) === ui.category).sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.code.localeCompare(b.code));
+  parts.push(`<div class="label">Puana göre · 50 grup ortası</div><div class="group">${list.map((f) => `<button class="row" data-act="go" data-kind="fon" data-code="${esc(f.code)}">
     <span class="l" style="flex:1"><b>${f.rank ? `<span class="mut" style="font-size:.9rem">${f.rank}.</span> ` : ''}${esc(f.code)}${mine[f.code] ? ` <span class="tag${f.rank && f.rank > m.P.decision.fund_top_n ? ' warn' : ''}">sende %${num(mine[f.code], 0)}</span>` : ''}${f.flags.filter((x) => x !== 'yeni_fon').map((x) => ` <span class="tag warn">${FLAG_LABELS[x]}</span>`).join('')}</b>
-    <small>${esc(fundReason(f, m.P))} · ücret ${pct(f.fee, 2)}</small>${strip(exposureParts(f.exposure), 'strip thin')}</span>
+    <small>${family ? `${esc(CATEGORY_LABELS[f.category] || '')} · ` : ''}${esc(fundReason(f, m.P))} · ücret ${pct(f.fee, 2)}</small>${strip(exposureParts(f.exposure), 'strip thin')}</span>
     <span class="r"><span class="num ${f.score === null ? 'mut' : f.score >= 55 ? 'pos' : f.score < 45 ? 'neg' : ''}" style="font-size:1.4rem">${f.score === null ? 'yeni' : num(f.score, 0)}</span>${chev()}</span></button>`).join('')}</div>`);
+  if (family) parts.push(`<p class="note">Bu ailedeki kategorilerden birinde ${m.P.fund_quality.min_peers}’ten az puanlı fon olduğu için fonlar birlikte puanlanıp sıralanıyor. Değiştir önerisi yine aynı türe gider.</p>`);
+  return parts.join('');
+}
+
+// Ümit vaat eden: kısa geçmiş yüzünden puanı 50'ye çekilmiş ama ham puanı güçlü fonlar; izlemede: yeni fonlar.
+function promisingList(m, pr, mine) {
+  const fq = m.P.fund_quality;
+  const funds = fundIndex(m.latest);
+  const parts = [];
+  parts.push(`<div class="label">Ümit vaat eden · ${num(fq.min_history_months, 0)}–${num(fq.full_confidence_months, 0)} ay</div>`);
+  parts.push(pr.promising.length ? `<div class="group">${pr.promising.map((x) => `<button class="row" data-act="go" data-kind="fon" data-code="${esc(x.code)}"><span class="l" style="flex:1"><b>${esc(x.code)}${mine[x.code] ? ` <span class="tag">sende %${num(mine[x.code], 0)}</span>` : ''}</b><small>${esc(peerName(funds[x.code]))} · ${num(x.months, 0)} ay · ham puanla ${x.peers} fonda ${x.raw_rank}.</small></span><span class="r"><span class="num pos" style="font-size:1.4rem">${num(x.raw, 0)}</span>${chev()}</span></button>`).join('')}</div>` : '<p class="empty">Şu an koşulu sağlayan fon yok.</p>');
+  parts.push(`<p class="note">Büyük sayı ham puan: kısa geçmiş düzeltmesi yapılmadan. Koşul: ham puanla akran grubunda ilk ${fq.promising_top_n} ya da ham puan ${fq.promising_min_raw} ve üstü. Yalnız bilgi; değiştir önerisi üretmez. ${num(fq.full_confidence_months, 0)} ayı doldurunca tam puanla sıralanır.</p>`);
+  if (pr.watch.length) {
+    parts.push(`<div class="label">İzlemede · ${num(fq.min_history_months, 0)} aydan kısa</div><div class="group">${pr.watch.map((x) => `<button class="row" data-act="go" data-kind="fon" data-code="${esc(x.code)}"><span class="l" style="flex:1"><b>${esc(x.code)}</b><small>${esc(peerName(funds[x.code]))} · ${num(x.months, 0)} ay · puanı ${num(fq.min_history_months, 0)} ayda başlar</small></span>${chev()}</button>`).join('')}</div>`);
+  }
   return parts.join('');
 }
 
@@ -645,7 +668,9 @@ function viewFon(m, code) {
   if (!f.halal) parts.push(`<div class="banner"><span class="app-i warn">!</span><span><b>Helal dışı</b><span>${esc(f.halal_reason || '')}</span></span></div>`);
   if (f.flags.length) parts.push(`<p class="note">${f.flags.map((x) => `<span class="tag warn">${FLAG_LABELS[x]}</span>`).join(' ')}</p>`);
   const sig = mine && m.funds ? (m.funds.switches.find((x) => x.from === code) || m.funds.weak.find((x) => x.code === code)) : null;
-  if (sig) parts.push(`<button class="banner" ${sig.to ? `data-act="go" data-kind="fon" data-code="${esc(sig.to)}"` : ''}><span class="app-i warn">!</span><span><b>${sig.to ? `Değiştir: ${esc(sig.to)}` : `Kategorisinde ${sig.rank}.`}</b><span>${sig.to ? esc(sig.reason) : `İlk ${m.P.decision.fund_top_n}: ${sig.top.map((x) => `${esc(x.code)} ${num(x.score, 0)}`).join(' · ')}`}</span></span>${sig.to ? chev() : ''}</button>`);
+  if (sig) parts.push(`<button class="banner" ${sig.to ? `data-act="go" data-kind="fon" data-code="${esc(sig.to)}"` : ''}><span class="app-i warn">!</span><span><b>${sig.to ? `Değiştir: ${esc(sig.to)}` : `${esc(peerName(f))} grubunda ${sig.rank}.`}</b><span>${sig.to ? esc(sig.reason) : `İlk ${m.P.decision.fund_top_n}: ${sig.top.map((x) => `${esc(x.code)} ${num(x.score, 0)}`).join(' · ')}`}</span></span>${sig.to ? chev() : ''}</button>`);
+  const prom = m.promising?.promising.find((x) => x.code === code);
+  if (prom) parts.push(`<button class="banner" data-act="explain" data-key="score:${esc(code)}"><span class="app-i">↗</span><span><b>Ümit vaat eden</b><span>${num(prom.months, 0)} ay · ham puan ${num(prom.raw, 0)} · ham puanla ${prom.peers} fonda ${prom.raw_rank}. ${num(m.P.fund_quality.full_confidence_months, 0)} ayda tam puana ulaşır.</span></span></button>`);
   const y1 = f.returns?.['1y'];
   const ex = f.excess?.['1y'];
   parts.push(`<div class="hero"><div class="k">Son 1 yıl</div><div class="v"><strong class="${(y1 ?? 0) < 0 ? 'neg' : 'pos'}">${pct(y1, 1, true)}</strong><span>${ex === null || ex === undefined ? '' : `${passive ? 'kıyasından' : 'içeriğinden'} ${num(Math.abs(ex), 1)} puan ${ex >= 0 ? 'fazla' : 'geride'}`}</span></div></div>`);
@@ -753,8 +778,8 @@ function answer(m, q) {
     const fs = m.funds;
     const lines = [
       ...fs.switches.map((x) => `<b>${esc(x.from)} → ${esc(x.to)}</b>: ${esc(x.reason)}.`),
-      ...fs.weak.filter((x) => !fs.switches.some((s) => s.from === x.code)).map((x) => `<b>${esc(x.code)}</b> kategorisinde ${x.rank}.; fark küçük, şimdilik izle.`),
-      ...fs.good.map((x) => `<b>${esc(x.code)}</b> kategorisinde ${x.rank}. — iyi.`),
+      ...fs.weak.filter((x) => !fs.switches.some((s) => s.from === x.code)).map((x) => `<b>${esc(x.code)}</b> ${x.peers} fonda ${x.rank}.; fark küçük, şimdilik izle.`),
+      ...fs.good.map((x) => `<b>${esc(x.code)}</b> ${x.peers} fonda ${x.rank}. — iyi.`),
       ...fs.fresh.map((x) => `<b>${esc(x.code)}</b>: henüz puanı yok.`),
     ];
     return { text: lines.join('<br>') || 'Puanlı fonun yok.', go: fs.switches.length ? 'dengele' : 'fonsinyal' };

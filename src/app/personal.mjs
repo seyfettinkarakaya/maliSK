@@ -25,7 +25,7 @@ export function applyParams(latest, P) {
     return { ...f, raw_score: raw, score: raw === null ? null : 50 + (f.confidence ?? 1) * (raw - 50) };
   });
   const byCat = {};
-  for (const f of funds) if (f.halal && f.score !== null) (byCat[f.category] ||= []).push(f);
+  for (const f of funds) if (f.halal && f.score !== null) (byCat[peerOf(f)] ||= []).push(f);
   for (const list of Object.values(byCat)) list.sort((a, b) => b.score - a.score).forEach((f, i) => { f.rank = i + 1; f.peers = list.length; });
   let anchor = latest.anchor;
   if (anchor?.ok && anchor.cov) {
@@ -34,6 +34,9 @@ export function applyParams(latest, P) {
   }
   return { ...latest, classes, funds, anchor };
 }
+
+// Akran grubu: hattan gelir; eski veride kategori.
+export const peerOf = (f) => f.peer_group ?? f.category;
 
 export function fundIndex(latest) {
   return Object.fromEntries(latest.funds.map((f) => [f.code, f]));
@@ -271,36 +274,70 @@ export function categoryLeaders(latest, params) {
   return out;
 }
 
-// Fon sinyali (docs/model.md, Bölüm 8): tüm BES evreninde kendi kategorisine göre; aralıktan ve şirketten bağımsız.
+// Akran grubunun en iyileri (sıra puana göre); seçim kuralları categoryLeaders ile aynı.
+export function peerLeaders(latest, params) {
+  const out = {};
+  for (const l of Object.values(categoryLeaders(latest, params))) for (const f of l) (out[peerOf(f)] ||= []).push(f);
+  for (const l of Object.values(out)) l.sort((a, b) => b.score - a.score);
+  return out;
+}
+
+// Fon sinyali (docs/model.md, Bölüm 8): tüm BES evreninde kendi akran grubuna göre; aralıktan ve şirketten bağımsız.
+// Aile grubunda değiştir önerisi aynı ana sınıftaki en iyi fona gider (gümüş fonu gümüş fonuna).
 export function fundSignals(latest, current, params) {
   const d = params.decision;
   const funds = fundIndex(latest);
-  const leaders = categoryLeaders(latest, params);
+  const leaders = peerLeaders(latest, params);
   const out = { switches: [], weak: [], risks: [], fresh: [], good: [] };
   for (const [code, w] of Object.entries(current)) {
     if (w <= 0) continue;
     const f = funds[code];
     if (!f) { out.risks.push({ code, weight: w, kind: 'veride_yok', text: 'veride bulunamadı' }); continue; }
-    const top = (leaders[f.category] || []).filter((x) => x.code !== code);
-    const best = top[0] || null;
+    const lead = leaders[peerOf(f)] || [];
+    // Aile grubunda (kategoriler birleşmişse) yalnız aynı ana sınıf; tek kategoride grubun en iyisi.
+    const family = peerOf(f) !== f.category;
+    const best = lead.find((x) => x.code !== code && (!family || x.main_class === f.main_class)) || null;
     const flags = f.flags.filter((x) => RISK_FLAGS.includes(x));
     if (!f.halal || flags.includes('helal_uyarisi')) {
       out.risks.push({ code, weight: w, kind: 'helal', text: f.halal_reason || 'helal dışı' });
-      if (best) out.switches.push({ from: code, to: best.code, weight: w, reason: `helal dışı; yerine kategorisinin 1.’si ${best.code} (${Math.round(best.score)})`, risk: true });
+      if (best) out.switches.push({ from: code, to: best.code, weight: w, reason: `helal dışı; yerine aynı türün en iyisi ${best.code} (${Math.round(best.score)})`, risk: true });
       continue;
     }
     for (const x of flags) out.risks.push({ code, weight: w, kind: x, text: { donusum: 'strateji değişti', strateji_kaymasi: 'stratejisi kaydı', supheli_veri: 'verisi şüpheli' }[x] });
     if (f.score === null) { out.fresh.push({ code, weight: w }); continue; }
     const rank = f.rank ?? null;
-    const lead = leaders[f.category] || [];
     if (rank !== null && rank <= d.fund_top_n) { out.good.push({ code, rank, peers: f.peers }); continue; }
     const top3 = lead.slice(0, d.fund_top_n).map((x) => ({ code: x.code, score: x.score }));
-    out.weak.push({ code, weight: w, rank, peers: f.peers, score: f.score, top: top3 });
+    out.weak.push({ code, weight: w, rank, peers: f.peers, score: f.score, top: top3, best_of_kind: family && (!best || best.score <= f.score) });
     if (best && best.score - f.score >= d.switch_score_gap) {
-      out.switches.push({ from: code, to: best.code, weight: w, gap: best.score - f.score, reason: `kategorisinde ${rank}.; 1. ${best.code} ${Math.round(best.score)}, fark ${Math.round(best.score - f.score)} puan` });
+      const head = lead[0].code === best.code ? '1.' : 'aynı türün en iyisi';
+      out.switches.push({ from: code, to: best.code, weight: w, gap: best.score - f.score, reason: `${f.peers} fonda ${rank}.; ${head} ${best.code} ${Math.round(best.score)}, fark ${Math.round(best.score - f.score)} puan` });
     }
   }
   return out;
+}
+
+// Ümit vaat eden ve izlemedeki fonlar (docs/model.md, Bölüm 8.2). Yalnız bilgi; öneri üretmez.
+export function promisingFunds(latest, params) {
+  const fq = params.fund_quality;
+  const ok = (f) => f.halal && f.category !== 'unclassified' && !params.allocation.excluded_categories.includes(f.category) && !f.flags.some((x) => RISK_FLAGS.includes(x));
+  const rawRank = {};
+  const byPeer = {};
+  for (const f of latest.funds) if (f.halal && f.raw_score !== null && f.raw_score !== undefined) (byPeer[peerOf(f)] ||= []).push(f);
+  for (const l of Object.values(byPeer)) l.sort((a, b) => b.raw_score - a.raw_score).forEach((f, i) => { rawRank[f.code] = { rank: i + 1, peers: l.length }; });
+  const promising = [];
+  const watch = [];
+  for (const f of latest.funds) {
+    if (!ok(f)) continue;
+    if (f.score === null && f.flags.includes('yeni_fon')) { watch.push({ code: f.code, months: f.history_months }); continue; }
+    if (f.score === null || f.history_months >= fq.full_confidence_months) continue;
+    const r = rawRank[f.code];
+    if (!r || (r.rank > fq.promising_top_n && f.raw_score < fq.promising_min_raw)) continue;
+    promising.push({ code: f.code, months: f.history_months, raw: f.raw_score, score: f.score, raw_rank: r.rank, peers: r.peers });
+  }
+  promising.sort((a, b) => b.raw - a.raw);
+  watch.sort((a, b) => b.months - a.months);
+  return { promising, watch };
 }
 
 // Eylem önerisi (docs/model.md, Bölüm 8): önce fon değişiklikleri (pay olduğu gibi yeni fona geçer), sonra dağılım

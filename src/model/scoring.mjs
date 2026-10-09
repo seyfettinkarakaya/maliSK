@@ -94,3 +94,14 @@ export function scoreCategory(metrics, { passive, params }) {
     return { code: m.code, raw_score: raw, score: shrunk?.score ?? null, confidence: shrunk?.confidence ?? null, components, medians: meds };
   });
 }
+
+// Akran grubu (docs/model.md, Bölüm 6): counts = { kategori: puanlanabilir fon sayısı }.
+// Ailedeki bir kategoride min_peers'ten az fon varsa ailenin bütün kategorileri aile kimliğini alır.
+export function peerGroups(counts, families, minPeers) {
+  const out = Object.fromEntries(Object.keys(counts).map((c) => [c, c]));
+  for (const [id, cats] of Object.entries(families || {})) {
+    const present = cats.filter((c) => c in counts);
+    if (present.some((c) => counts[c] < minPeers)) for (const c of present) out[c] = id;
+  }
+  return out;
+}
