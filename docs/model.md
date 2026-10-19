@@ -1,4 +1,4 @@
-# maliSK modeli — sürüm 2.7
+# maliSK modeli — sürüm 2.8
 
 **Tarih:** 9 Ekim 2026 · **Sahibi:** Seyfettin · Kaynak: BES Fon Danışmanı spesifikasyonu 2.0
 ve 7–8 Ekim 2026 tarihli model görüşmelerindeki kararlar (en altta değişiklik günlüğü).
@@ -52,7 +52,8 @@ Her iş günü: dağılımım ne durumda, piyasa ve fonlar ne söylüyor, dağı
   fonda Belirsiz); "diğer" para piyasası fonunda TL sabit, diğerlerinde Belirsiz.
 - **Maruziyet:** `E_s = Σ_f w_f · i_(f,s)`. Fonun ana sınıfı en büyük paylı sınıftır.
 - **Sınıf getiri serisi:** temsil eden kategorideki fonların günlük getirilerinin medyanı.
-  Sınıfta 3'ten az fon varsa piyasa serisi kullanılır (Yabancı hisse: S&P 500 × USD/TRY).
+  Üyeler: sınıfın kategorisindeki ve ana sınıfı o sınıf olan fonlar; sınıfın kategorisinde fon yoksa
+  (yabancı hisse, döviz) ana sınıfı o sınıf olan fonlar. Tek fon da yeterlidir (kullanıcı kararı, 19 Ekim 2026).
 
 ## 4. Katman 1a — çapa (üç ayda bir öneri, karar kullanıcının)
 
@@ -245,6 +246,14 @@ Ek A'daki 8 fonla, yılbaşı = 9 ay:
   fazla getiri.
 - Hak sayacı, Google Sheet, TL tutar ve XIRR ilk sürümden çıkarıldı. Ledoit-Wolf kapalı (Ö2).
 - Çapada olmayan sınıf izlenir (kullanıcı onayladı, 8 Ekim 2026).
+
+### 2.7 → 2.8 (19 Ekim 2026, kullanıcı onayı)
+
+- Sınıf serisi için tek helal fon yeterli; yabancı hisse ve döviz sınıfı ana sınıfı o sınıf olan fonlardan
+  (döviz: döviz değişken ve dış kira sertifikası fonları). Gümüş ve yabancı hisse çapa önerisine girer.
+- Döviz, TL cinsinden çok az oynak göründüğü için hedef portföy tartışmasına kadar çapa önerisinin dışında.
+- Terim: çapa ve piyasa görüşünden çıkan hedeflerin bütününe "hedef portföy" denir.
+- Model ayarları gruplara ayrıldı; her ayar dokununca soru, açıklama ve canlı örnekle açılır.
 
 ### 2.6 → 2.7 (9 Ekim 2026, kullanıcı onayı)
 

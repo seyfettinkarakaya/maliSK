@@ -220,3 +220,22 @@ input[type="range"].split::-moz-range-track { height: .7rem; border-radius: .35r
 .prow small.ex { color: var(--mint); }
 .pctl { display: flex; justify-content: space-between; align-items: center; gap: .6rem; margin-top: .25rem; }
 .note.ptop { padding-top: 0; margin-top: -.2rem; }
+/* Model ayarları: merkez ve grup sayfaları */
+.pico { width: 2.5rem; height: 2.5rem; border-radius: .75rem; display: flex; align-items: center; justify-content: center; flex: none; color: var(--c); background: color-mix(in srgb, var(--c) 18%, transparent); }
+.pico.big { width: 3.2rem; height: 3.2rem; border-radius: 1rem; }
+.pgrow { gap: .8rem; }
+.pgrow .l small { line-height: 1.35; }
+.phead { display: flex; align-items: center; gap: .9rem; padding: .4rem 1.15rem 0; }
+.phead h1 { font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
+.phead p { font-size: 1rem; font-weight: 700; color: var(--tx2); line-height: 1.3; margin-top: .2rem; }
+.prow2 .pval { font-size: 1.15rem; font-weight: 800; white-space: nowrap; }
+.prow2 .pval.changed { color: var(--mint); }
+.prow2 .pchev { display: flex; transition: transform .15s; opacity: .7; }
+.prow2.open .pchev { transform: rotate(90deg); }
+.prow2.open { border-bottom: 0; }
+.pexp { padding: 0 0 1rem; border-bottom: 1px solid var(--sep); display: flex; flex-direction: column; gap: .55rem; }
+.pexp:last-child { border-bottom: 0; }
+.pexp > b { font-size: 1.05rem; font-weight: 800; line-height: 1.3; }
+.pexp > p { font-size: .95rem; font-weight: 700; color: var(--tx2); line-height: 1.4; }
+.pex { background: var(--mint-soft); color: var(--tx); border-radius: .8rem; padding: .7rem .85rem; font-size: .95rem; font-weight: 700; line-height: 1.4; }
+.btn.small { padding: .55rem .9rem; font-size: .95rem; align-self: flex-start; width: auto; min-height: 2.4rem; background: var(--s2); }

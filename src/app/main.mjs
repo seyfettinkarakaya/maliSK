@@ -198,7 +198,7 @@ function back(label) {
 
 function backLabel() {
   const prev = ui.stack[ui.stack.length - 2];
-  if (prev) return { dagilim: 'Dağılım', dengele: 'Dengele', fonsinyal: 'Fonlarım', grup: GROUP_LABELS[prev.id] || 'Geri', fon: prev.code, sozlesme: `Sözleşme ${prev.id}`, capa: 'Çapa', ayarlar: 'Ayarlar', yapistir: 'Yapıştır' }[prev.kind] || 'Geri';
+  if (prev) return { dagilim: 'Dağılım', dengele: 'Dengele', fonsinyal: 'Fonlarım', grup: GROUP_LABELS[prev.id] || 'Geri', fon: prev.code, sozlesme: `Sözleşme ${prev.id}`, capa: 'Çapa', ayarlar: 'Ayarlar', parametreler: 'Model ayarları', paramgrup: PARAM_GROUPS[prev.id]?.name || 'Geri', yapistir: 'Yapıştır' }[prev.kind] || 'Geri';
   return { ozet: 'Özet', sozlesmeler: 'Sözleşmeler', fonlar: 'Fonlar', sor: 'Sor' }[ui.tab];
 }
 
@@ -224,7 +224,7 @@ function explain(key, m) {
       html: `<div class="formula">S (sınıf) = ${t.weights.trend} × T + ${t.weights.macro} × M + ${t.weights.user} × K<br>S (grup) = Σ grup içi pay × S<br>eğim = ${t.max_tilt_pts} × S / ${num(t.full_tilt_at, 2)} (en çok ±${t.max_tilt_pts})<br>hedef = (çapa + eğim) × 100 / Σ × (100 − izlenen) / 100</div>`
         + sheetTable([...g.classes.map((c) => [`${CLASS_LABELS[c]} S × pay`, `${signed(m.targets.rows[c].S, 2)} × %${num(g.splits[c], 0)}`]),
           ['S (grup)', signed(g.S, 2)], ['Eğim', signed(g.tilt, 2) + ' puan'], ['Çapa', num(g.anchor, 1)], ['Tüm grupların toplamı', num(m.targets.raw_sum, 2)],
-          ['İzlenen sınıfların payı', num(m.targets.unmanaged_share, 2)]], ['Hedef', num(g.target, 2)]) + foot,
+          ['İzlenen sınıfların payı', num(m.targets.unmanaged_share, 2)]], ['Hedef portföydeki payı', num(g.target, 2)]) + foot,
     };
   }
   if (kind === 'band') {
@@ -428,7 +428,7 @@ function viewDagilim(m) {
       parts.push(`<div class="label">${GROUP_LABELS[g]} · dağılım tarihinden beri</div><div class="group" style="padding:.8rem 0 .6rem"><div class="chart" style="padding:0 .4rem">${area(h, gvar(g), 358, 160, b)}</div>
         <p class="note" style="padding:.4rem .95rem 0">Açık bant izin verilen aralık, kesikli çizgi hedef. ${m.bands.counters['group:' + g] || 0} iş günüdür ${b.status === 'inside' ? 'içinde' : 'dışında'}.</p></div>`);
     }
-    parts.push(`<div style="height:1rem"></div><div class="group"><button class="row" data-act="go" data-kind="capa"><span class="l"><b>Hedefler nereden geliyor?</b><small>Çapa ağacı ve piyasa görüşü</small></span>${chev()}</button></div>`);
+    parts.push(`<div style="height:1rem"></div><div class="group"><button class="row" data-act="go" data-kind="capa"><span class="l"><b>Hedef portföy nereden geliyor?</b><small>Temel dağılım (çapa) ve piyasa görüşü</small></span>${chev()}</button></div>`);
   }
   return parts.join('');
 }
@@ -875,27 +875,79 @@ function paramExample(key, P, m) {
   }
 }
 
+const PICONS = {
+  scale: '<path d="M12 3v18M7 21h10M4 7h16"/><path d="M4 7l-3 6a3 3 0 0 0 6 0zM20 7l-3 6a3 3 0 0 0 6 0z"/>',
+  bars: '<path d="M4 20V11M10 20V5M16 20v-6M2 20h20"/>',
+  sliders: '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+  eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  bell: '<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21a2 2 0 0 0 4 0"/>',
+  anchor: '<circle cx="12" cy="5" r="2"/><path d="M12 7v14M5 13a7 7 0 0 0 14 0M8 10h8"/>',
+  gauge: '<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/>',
+};
+const picon = (name, size = 22) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PICONS[name] || ''}</svg>`;
+const fmtParam = (meta, v) => (meta.step < 1 && meta.step !== 0.5 ? num(v, 2) : num(v, meta.step % 1 ? 1 : 0));
+const paramUnit = (meta, v) => (meta.unit === '%' ? `%${fmtParam(meta, v)}` : `${fmtParam(meta, v)}${meta.unit ? ` ${meta.unit}` : ''}`);
+
+// Grup özeti (merkez sayfada): en önemli ayarlar kısa.
+function paramSummary(gk, P) {
+  const d = P.decision;
+  const fw = P.fund_quality.weights;
+  return {
+    rebalance: `Sarı %${num(d.yellow_rel_pct, 0)} · kırmızı %${num(d.red_rel_pct, 0)} · ${d.confirm_days} iş günü`,
+    funds: `İlk ${d.fund_top_n} · değiştir ${d.switch_score_gap} puan farkla`,
+    proposal: `Yeni fon en çok %${num(P.fund_quality.new_fund_cap_pct, 0)} · araç yok ${num(P.allocation.no_instrument_pts, 1)} puan`,
+    view: `En çok ±${num(P.tactical.max_tilt_pts, 1)} puan · trend ${num(P.tactical.weights.trend, 2)}`,
+    alert: `Normal oynaklığın ${num(d.alert_sigma_mult, 2)} katı`,
+    anchor: `Oynaklık %${num(P.anchor.target_vol_pct, 0)} · tavan %${num(P.anchor.class_cap_pct, 0)}`,
+    score: [fw.consistency, fw.excess_index, fw.risk, fw.cost, fw.hygiene].map((x) => num(x, 2)).join(' · '),
+  }[gk];
+}
+
+const paramDirty = () => JSON.stringify(Object.entries(ui.paramDraft || {}).sort()) !== JSON.stringify(Object.entries(state.params.values || {}).sort());
+
+function paramSaveBar(errors) {
+  if (!paramDirty() && !errors.length) return '';
+  return `${errors.length ? `<p class="note neg">${errors.map(esc).join(' · ')}</p>` : ''}<div class="btns"><button class="btn primary" data-act="params-save" ${errors.length ? 'disabled' : ''}>Kaydet (sürüm ${DEFAULT_PARAMS.version}.${(state.params.n || 0) + 1})</button></div>`;
+}
+
+// Model ayarları merkezi: gruplar ayrı sayfalarda.
 function viewParametreler(m) {
   if (!ui.paramDraft) ui.paramDraft = { ...(state.params.values || {}) };
   const eff = effectiveParams(DEFAULT_PARAMS, ui.paramDraft, PARAM_META);
   const errors = validateParams(eff);
-  const fmtv = (meta, v) => (meta.step < 1 && meta.step !== 0.5 ? num(v, 2) : num(v, meta.step % 1 ? 1 : 0));
   const parts = [back(backLabel()), title('Model ayarları', `Sürüm ${m.param_version} · değişiklikler telefonda hesaplanır`)];
-  for (const [gk, g] of Object.entries(PARAM_GROUPS)) {
-    const items = PARAM_META.filter((x) => x.group === gk);
-    if (!items.length) continue;
-    parts.push(`<div class="label">${esc(g.title)}</div>${g.note ? `<p class="note ptop">${esc(g.note)}</p>` : ''}<div class="group">${items.map((meta) => {
-      const v = getPath(eff, meta.key);
-      const def = getPath(DEFAULT_PARAMS, meta.key);
-      const ex = paramExample(meta.key, eff, m);
-      return `<div class="prow"><b>${esc(meta.label)}</b>${meta.help ? `<small>${esc(meta.help)}</small>` : ''}${ex ? `<small class="ex">${esc(ex)}</small>` : ''}
-        <div class="pctl"><span class="mut">${v !== def ? `varsayılan ${fmtv(meta, def)}` : ''} ${esc(meta.unit)}</span><div class="stepper"><button data-act="pstep" data-key="${meta.key}" data-d="-1" aria-label="Azalt">−</button><input readonly value="${fmtv(meta, v)}" class="${v !== def ? 'pos' : ''}" aria-label="${esc(meta.label)}"><button data-act="pstep" data-key="${meta.key}" data-d="1" aria-label="Artır">+</button></div></div></div>`;
-    }).join('')}</div>`);
-  }
-  if (errors.length) parts.push(`<p class="note neg">${errors.map(esc).join(' · ')}</p>`);
-  parts.push(`<div class="btns"><button class="btn primary" data-act="params-save">Kaydet (sürüm ${DEFAULT_PARAMS.version}.${(state.params.n || 0) + 1})</button></div><div class="btns"><button class="btn plain" data-act="params-reset">Varsayılana dön</button></div>`);
+  parts.push(`<div style="height:.8rem"></div><div class="group">${Object.entries(PARAM_GROUPS).map(([gk, g]) => {
+    const changed = PARAM_META.filter((x) => x.group === gk && getPath(eff, x.key) !== getPath(DEFAULT_PARAMS, x.key)).length;
+    return `<button class="row pgrow" data-act="go" data-kind="paramgrup" data-id="${gk}"><span class="pico" style="--c:var(${g.color})">${picon(g.icon)}</span><span class="l" style="flex:1"><b>${esc(g.name)}${changed ? ` <span class="tag">${changed} değişik</span>` : ''}</b><small>${esc(paramSummary(gk, eff))}</small></span>${chev()}</button>`;
+  }).join('')}</div>`);
+  parts.push(paramSaveBar(errors));
+  parts.push('<div class="btns"><button class="btn plain" data-act="params-reset">Hepsini varsayılana döndür</button></div>');
   if (state.param_history.length) parts.push(`<div class="label">Geçmiş</div><div class="group">${state.param_history.slice().reverse().map((h) => `<div class="row"><span class="l"><b style="font-size:1rem">Sürüm ${DEFAULT_PARAMS.version}.${h.n}</b><small>${dateTr(h.date)} · ${Object.keys(h.values).length} değişiklik</small></span></div>`).join('')}</div>`);
   parts.push('<p class="note">Fon puanı ağırlıkları, acil uyarı eşiği ve çapa önerisi de telefonda yeniden hesaplanır; sunucudaki veri değişmez.</p>');
+  return parts.join('');
+}
+
+// Bir grubun ayarları: kısa satırlar; dokununca soru, açıklama, canlı örnek ve değiştirme düğmeleri açılır.
+function viewParamGrup(m, gk) {
+  if (!ui.paramDraft) ui.paramDraft = { ...(state.params.values || {}) };
+  const g = PARAM_GROUPS[gk];
+  const eff = effectiveParams(DEFAULT_PARAMS, ui.paramDraft, PARAM_META);
+  const errors = validateParams(eff);
+  const parts = [back(backLabel())];
+  parts.push(`<div class="phead"><span class="pico big" style="--c:var(${g.color})">${picon(g.icon, 28)}</span><div><h1>${esc(g.name)}</h1><p>${esc(g.title)}</p></div></div>`);
+  if (g.note) parts.push(`<p class="note">${esc(g.note)}</p>`);
+  parts.push(`<div style="height:.6rem"></div><div class="group">${PARAM_META.filter((x) => x.group === gk).map((meta) => {
+    const v = getPath(eff, meta.key);
+    const def = getPath(DEFAULT_PARAMS, meta.key);
+    const open = ui.paramOpen === meta.key;
+    const ex = open ? paramExample(meta.key, eff, m) : '';
+    const head = `<button class="row prow2${open ? ' open' : ''}" data-act="popen" data-key="${meta.key}" aria-expanded="${open}"><span class="l" style="flex:1"><b>${esc(meta.short)}</b>${v !== def ? `<small>varsayılan ${esc(paramUnit(meta, def))}</small>` : ''}</span><span class="pval${v !== def ? ' changed' : ''}">${esc(paramUnit(meta, v))}</span><span class="pchev">${chev()}</span></button>`;
+    if (!open) return head;
+    return head + `<div class="pexp"><b>${esc(meta.label)}</b>${meta.help ? `<p>${esc(meta.help)}</p>` : ''}${ex ? `<div class="pex">${esc(ex)}</div>` : ''}
+      <div class="pctl"><span class="mut">aralık ${esc(paramUnit(meta, meta.min))} – ${esc(paramUnit(meta, meta.max))}</span><div class="stepper"><button data-act="pstep" data-key="${meta.key}" data-d="-1" aria-label="Azalt">−</button><input readonly value="${fmtParam(meta, v)}" class="${v !== def ? 'pos' : ''}" aria-label="${esc(meta.short)}"><button data-act="pstep" data-key="${meta.key}" data-d="1" aria-label="Artır">+</button></div></div>
+      ${v !== def ? `<button class="btn plain small" data-act="pdefault" data-key="${meta.key}">Varsayılana döndür (${esc(paramUnit(meta, def))})</button>` : ''}</div>`;
+  }).join('')}</div>`);
+  parts.push(paramSaveBar(errors));
   return parts.join('');
 }
 
@@ -953,7 +1005,7 @@ function render() {
   const views = {
     dagilim: () => viewDagilim(m), dengele: () => viewDengele(m), fonsinyal: () => viewFonSinyal(m), grup: () => viewGrup(m, p.id), fon: () => viewFon(m, p.code),
     sozlesme: () => viewSozlesme(m, p.id), yapistir: () => viewYapistir(m, p.id), paylar: () => viewPaylar(m), capa: () => viewCapa(m),
-    ayarlar: () => viewAyarlar(m), firmalar: () => viewFirmalar(m), parametreler: () => viewParametreler(m), bildirim: () => viewBildirim(), yedek: () => viewYedek(), veri: () => viewVeri(m),
+    ayarlar: () => viewAyarlar(m), firmalar: () => viewFirmalar(m), parametreler: () => viewParametreler(m), paramgrup: () => viewParamGrup(m, p.id), bildirim: () => viewBildirim(), yedek: () => viewYedek(), veri: () => viewVeri(m),
   };
   const tabs = { ozet: () => viewOzet(m), sozlesmeler: () => viewSozlesmeler(m), fonlar: () => viewFonlar(m), sor: () => viewSor(m) };
   const html = p ? views[p.kind]() : tabs[ui.tab]();
@@ -1036,6 +1088,7 @@ root.addEventListener('click', async (e) => {
     const kind = el.dataset.kind;
     if (kind === 'capa') ui.anchorDraft = null;
     if (kind === 'parametreler') ui.paramDraft = null;
+    if (kind === 'paramgrup') ui.paramOpen = null;
     if (kind === 'paylar') ui.shareDraft = null;
     if (kind === 'yapistir') { ui.parsed = null; ui.paste = ''; }
     go({ kind, id: el.dataset.id || null, code: el.dataset.code || null });
@@ -1122,6 +1175,10 @@ root.addEventListener('click', async (e) => {
     const cur = getPath(effectiveParams(DEFAULT_PARAMS, ui.paramDraft, PARAM_META), meta.key);
     const v = stepNum(cur, Number(el.dataset.d), meta);
     if (v === getPath(DEFAULT_PARAMS, meta.key)) delete ui.paramDraft[meta.key]; else ui.paramDraft[meta.key] = v;
+  } else if (act === 'popen') {
+    ui.paramOpen = ui.paramOpen === el.dataset.key ? null : el.dataset.key;
+  } else if (act === 'pdefault') {
+    delete ui.paramDraft[el.dataset.key];
   } else if (act === 'params-reset') {
     ui.paramDraft = {};
   } else if (act === 'params-save') {

@@ -13,7 +13,7 @@ import {
   sampleEvery, monthlyReturns, shiftDays, shiftMonths,
 } from './series.mjs';
 
-export const MODEL_VERSION = '2.7';
+export const MODEL_VERSION = '2.8';
 const RISKY = ['gold', 'silver', 'equity_tr', 'equity_foreign', 'fx_fixed'];
 const PERIODS = ['1m', '3m', '6m', 'ytd', '1y', '3y', '5y'];
 const TAIL_DAYS = 130;
@@ -76,9 +76,10 @@ export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }
   const classSeries = {};
   const classMembers = {};
   for (const cls of CLASSES.filter((c) => c !== 'unclassified')) {
-    const members = cls === 'equity_foreign'
-      ? helal.filter((f) => f.main_class === 'equity_foreign')
-      : helal.filter((f) => (U.class_categories[cls] || []).includes(f.category));
+    // Sınıfın kendi kategorisi varsa o kategorideki ve ana sınıfı bu olan fonlar; yoksa (yabancı hisse,
+    // döviz) ana sınıfı bu olan fonlar. Tek fon da yeterli (min_funds_per_class).
+    const byCat = helal.filter((f) => (U.class_categories[cls] || []).includes(f.category) && f.main_class === cls);
+    const members = byCat.length ? byCat : helal.filter((f) => f.main_class === cls);
     classMembers[cls] = members.map((f) => f.code);
     classSeries[cls] = members.length >= params.anchor.min_funds_per_class ? medianSeries(calendar, members.map((f) => f.rets)) : null;
   }
@@ -131,7 +132,7 @@ export function computeLatest({ fundsMeta, typeMeta = { as_of: null, funds: {} }
 
   // 4. Çapa önerisi: haftalık getiri, en çok 3 yıl.
   const anchor = (() => {
-    const ids = RISKY.filter((c) => classSeries[c]);
+    const ids = RISKY.filter((c) => classSeries[c] && !(params.anchor.exclude_classes || []).includes(c));
     if (ids.length < 2) return { ok: false, reason: 'yeterli sınıf serisi yok', ids };
     const weeks = params.anchor.window_years * 52;
     const pos = calendar.slice();

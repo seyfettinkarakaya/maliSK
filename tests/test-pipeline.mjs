@@ -104,15 +104,16 @@ test('computeLatest: sentetik piyasa uçtan uca', () => {
   assert.equal(byCode.GA4.halal, false);
   assert.match(byCode.GA4.halal_reason, /kibd/);
   assert.equal(out.sources.tefas.halal, 11);
-  // Sınıf serileri: altında 3 helal fon var, gümüşte 1 (yetersiz).
+  // Sınıf serileri: altında 3 helal fon var, gümüşte 1 (tek fon da yeterli, sürüm 2.8).
   assert.equal(out.classes.gold.series_ok, true);
   assert.equal(out.classes.gold.n_funds, 3);
-  assert.equal(out.classes.silver.series_ok, false);
+  assert.equal(out.classes.silver.series_ok, true);
+  assert.equal(out.classes.silver.n_funds, 1);
   assert.equal(out.classes.tl_fixed.series_ok, true);
   assert.ok(out.classes.gold.trend.signals.ma === 1 || out.classes.gold.trend.signals.ma === -1);
-  // Çapa: altın ve yurtiçi hisse ile hazır, toplam 100.
+  // Çapa: altın, gümüş ve yurtiçi hisse ile hazır, toplam 100.
   assert.equal(out.anchor.ok, true, out.anchor.reason);
-  assert.deepEqual(out.anchor.ids, ['gold', 'equity_tr']);
+  assert.deepEqual(out.anchor.ids, ['gold', 'silver', 'equity_tr']);
   near(Object.values(out.anchor.user_groups.weights).reduce((a, b) => a + b, 0), 100, 0.05);
   // Fon puanı: kategori içinde sıralı; yeni fon puanlanmaz; küçük fon hijyeni 0,5.
   assert.ok(byCode.GA1.score !== null && byCode.GA1.rank >= 1);
