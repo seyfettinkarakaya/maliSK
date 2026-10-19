@@ -147,7 +147,7 @@ for (const id of ['DGS10', 'DFII10', 'DTWEXBGS', 'DCOILBRENTEU', 'VIXCLS', 'SP50
 await av('function=GOLD_SILVER_HISTORY&symbol=GOLD&interval=daily', 'GOLD_SILVER_HISTORY GOLD');
 await av('function=GOLD_SILVER_HISTORY&symbol=SILVER&interval=daily', 'GOLD_SILVER_HISTORY SILVER');
 await av('function=FX_DAILY&from_symbol=USD&to_symbol=TRY&outputsize=full', 'FX_DAILY USD/TRY');
-for (const s of ['GC=F', 'SI=F', 'XU100.IS', 'XKTUM.IS', 'XK030.IS', 'XK050.IS', 'XK100.IS', '^GSPC', 'SPUS', 'HLAL', 'UMMA', 'SPWO', 'ISWD.L', 'ISDW.L', 'ISUS.L', 'ISDU.L', 'AMAGX', 'SPSK', 'DX-Y.NYB', 'BZ=F', 'USDTRY=X', 'XAUUSD=X']) await yahoo(s);
+// Yahoo GitHub IPlerinden 429 döndürüyor (19 Ekim 2026); ilk denemede tamamı başarısız.
 for (const c of ['XU100', 'XKTUM', 'XK030']) await bist(c);
 for (const c of ['XU100', 'XKTUM', 'XK030']) await isyatirim(c);
 await msci('990100', 'MSCI World (990100)');

@@ -21,4 +21,4 @@ jobs:
           EVDS_KEY: ${{ secrets.EVDS_KEY }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           ALPHAVANTAGE_KEY: ${{ secrets.ALPHAVANTAGE_KEY }}
-        run: node scripts/probe-sources.mjs
+        run: node scripts/probe-sources.mjs && node scripts/probe-sources2.mjs
