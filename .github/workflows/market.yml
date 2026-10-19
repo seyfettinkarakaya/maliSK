@@ -1,0 +1,55 @@
+name: Piyasa verisi
+
+# Elle çalışır: yalnız piyasa serilerini günceller (TEFAS'a dokunmaz). İlk kurulumda "backfill" işaretli
+# çalıştırılır; katalogdaki başlangıç tarihlerinden bugüne tüm geçmiş yüklenir. Günlük güncelleme
+# "Günlük veri" iş akışının içindedir.
+on:
+  workflow_dispatch:
+    inputs:
+      backfill:
+        description: "Tüm geçmişi yükle"
+        type: boolean
+        default: false
+      only:
+        description: "Yalnız bu seriler (virgülle; boş = hepsi)"
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-data
+  cancel-in-progress: false
+
+jobs:
+  market:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Piyasa verisini çek
+        env:
+          EVDS_KEY: ${{ secrets.EVDS_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          ALPHAVANTAGE_KEY: ${{ secrets.ALPHAVANTAGE_KEY }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.backfill }}" = "true" ]; then ARGS="--backfill"; fi
+          if [ -n "${{ inputs.only }}" ]; then ARGS="$ARGS --only=${{ inputs.only }}"; fi
+          node src/pipeline/market.mjs $ARGS
+      - name: Depoya yaz
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data/market/
+          if git diff --cached --quiet; then
+            echo "Değişiklik yok."
+          else
+            git commit -m "Piyasa verisi: $(date -u +%Y-%m-%d)"
+            git pull --rebase origin main
+            git push
+          fi

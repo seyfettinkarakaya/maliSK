@@ -30,6 +30,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Piyasa verisi (EVDS, FRED, Alpha Vantage, Borsa İstanbul, MSCI)
+        # Bir kaynak çalışmazsa yedeği denenir; hata TEFAS adımını durdurmaz.
+        continue-on-error: true
+        env:
+          EVDS_KEY: ${{ secrets.EVDS_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          ALPHAVANTAGE_KEY: ${{ secrets.ALPHAVANTAGE_KEY }}
+        run: |
+          if [ "${{ inputs.backfill }}" = "true" ]; then
+            node src/pipeline/market.mjs --backfill
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            node src/pipeline/market.mjs --skip-if-done
+          else
+            node src/pipeline/market.mjs
+          fi
       - name: Veriyi çek ve hesapla
         id: update
         run: |
