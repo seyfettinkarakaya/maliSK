@@ -1,44 +1,24 @@
-name: F0 veri denemesi
+name: Veri kaynağı denemesi
 
-# TEFAS, EVDS ve FRED'e canlı istek atar; docs/data_fields.md dosyasını üretip depoya yazar.
-# Actions sekmesinden "Run workflow" ile ya da tools/probe.py değişince çalışır.
+# Yalnız elle çalışır. Kaynaklara az sayıda istek atar, sonucu loga ve özete yazar; depoya bir şey yazmaz.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - tools/probe.py
-      - .github/workflows/probe.yml
 
 permissions:
-  contents: write
-
-concurrency:
-  group: probe
-  cancel-in-progress: false
+  contents: read
 
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.12"
-      - run: pip install -r requirements.txt
-      - run: python tools/probe.py
+          node-version: "22"
+      - name: Kaynakları dene
         env:
-          EVDS_API_KEY: ${{ secrets.EVDS_API_KEY }}
+          EVDS_KEY: ${{ secrets.EVDS_KEY }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-      - name: Sonuçları depoya yaz
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add docs/
-          if git diff --cached --quiet; then
-            echo "Değişiklik yok."
-          else
-            git commit -m "F0: canlı veri denemesi sonuçları"
-            git push
-          fi
+          ALPHAVANTAGE_KEY: ${{ secrets.ALPHAVANTAGE_KEY }}
+        run: node scripts/probe-sources.mjs
