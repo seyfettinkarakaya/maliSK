@@ -54,7 +54,7 @@ export const MARKET_SERIES = [
   // Küresel makro ve risk
   { id: 'us_10y', label: 'ABD 10 yıllık faiz', asset: 'macro', role: 'macro', freq: 'daily', unit: '%', start: '1990-01-01', sources: [{ provider: 'fred', code: 'DGS10' }] },
   { id: 'us_real_10y', label: 'ABD 10 yıllık reel faiz', asset: 'macro', role: 'macro', freq: 'daily', unit: '%', start: '2003-01-01', sources: [{ provider: 'fred', code: 'DFII10' }] },
-  { id: 'usd_broad', label: 'Geniş dolar endeksi', asset: 'macro', role: 'macro', freq: 'daily', unit: 'endeks', start: '2006-01-01', sources: [{ provider: 'fred', code: 'DTWEXBGS' }] },
+  { id: 'usd_broad', label: 'Geniş dolar endeksi', asset: 'macro', role: 'macro', freq: 'weekly', unit: 'endeks', start: '2006-01-01', sources: [{ provider: 'fred', code: 'DTWEXBGS' }] },
   { id: 'brent', label: 'Brent petrol', asset: 'macro', role: 'macro', freq: 'daily', unit: 'USD', start: '1990-01-01', sources: [{ provider: 'fred', code: 'DCOILBRENTEU' }] },
   { id: 'vix', label: 'VIX', asset: 'macro', role: 'macro', freq: 'daily', unit: 'puan', start: '1990-01-01', sources: [{ provider: 'fred', code: 'VIXCLS' }] },
 ];

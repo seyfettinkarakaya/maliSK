@@ -103,6 +103,14 @@ export function windows(from, to, days) {
   return out;
 }
 
+// Alpha Vantage ücretsiz anahtarı saniyede 1 istek kabul eder; ardışık istekler arasında beklenir.
+let avLast = 0;
+async function avThrottle(gapMs = 1600) {
+  const wait = avLast + gapMs - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  avLast = Date.now();
+}
+
 const EVDS_WINDOW = { daily: 1000, weekly: 5000, monthly: 20000 };
 
 // Her kaynak: (source, {from, to, freq}, env, get) → [{date, value}]. get testte değiştirilebilir.
@@ -122,11 +130,13 @@ export const providers = {
   },
   async alphavantage_metal(src, { from }, env, get = fetchText) {
     if (!env.ALPHAVANTAGE_KEY) throw new Error('Alpha Vantage anahtarı yok');
+    if (get === fetchText) await avThrottle();
     const rows = parsers.alphavantage_metal(await get(`https://www.alphavantage.co/query?function=GOLD_SILVER_HISTORY&symbol=${src.code}&interval=daily&apikey=${env.ALPHAVANTAGE_KEY}`));
     return rows.filter((r) => r.date >= from);
   },
   async alphavantage_fx(src, { from }, env, get = fetchText) {
     if (!env.ALPHAVANTAGE_KEY) throw new Error('Alpha Vantage anahtarı yok');
+    if (get === fetchText) await avThrottle();
     const rows = parsers.alphavantage_fx(await get(`https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=${src.code}&to_symbol=TRY&outputsize=full&apikey=${env.ALPHAVANTAGE_KEY}`));
     return rows.filter((r) => r.date >= from);
   },
