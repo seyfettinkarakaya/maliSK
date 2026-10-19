@@ -43,24 +43,22 @@
    "stale": false,
    "age_days": 1,
    "errors": [],
-   "checked_at": "2026-10-19T15:37:26.957Z"
+   "checked_at": "2026-10-19T19:42:59.452Z"
   },
   "silver_usd": {
    "label": "Ons gümüş",
    "freq": "daily",
    "role": "main",
    "asset": "silver",
-   "first_date": null,
-   "last_date": null,
-   "rows": 0,
-   "source": null,
-   "ok": false,
-   "stale": true,
-   "age_days": null,
-   "errors": [
-    "alphavantage_metal: Thank you for using Alpha Vantage! Please consider spreading out your free API requests more sparingly (1 request per se"
-   ],
-   "checked_at": "2026-10-19T15:37:26.987Z"
+   "first_date": "2011-06-01",
+   "last_date": "2026-10-18",
+   "rows": 5428,
+   "source": "alphavantage_metal",
+   "ok": true,
+   "stale": false,
+   "age_days": 1,
+   "errors": [],
+   "checked_at": "2026-10-19T19:43:00.720Z"
   },
   "gold_try_bist": {
    "label": "Borsa İstanbul altın",
@@ -274,7 +272,7 @@
   },
   "usd_broad": {
    "label": "Geniş dolar endeksi",
-   "freq": "daily",
+   "freq": "weekly",
    "role": "macro",
    "asset": "macro",
    "first_date": "2006-01-02",
@@ -282,10 +280,10 @@
    "rows": 5208,
    "source": "fred",
    "ok": true,
-   "stale": true,
+   "stale": false,
    "age_days": 10,
    "errors": [],
-   "checked_at": "2026-10-19T15:37:54.436Z"
+   "checked_at": "2026-10-19T19:43:08.844Z"
   },
   "brent": {
    "label": "Brent petrol",
@@ -316,7 +314,82 @@
    "age_days": 3,
    "errors": [],
    "checked_at": "2026-10-19T15:37:54.979Z"
+  },
+  "msci_world_islamic": {
+   "label": "MSCI Dünya İslami",
+   "freq": "daily",
+   "role": "halal",
+   "asset": "equity_foreign",
+   "first_date": "2007-06-01",
+   "last_date": "2026-10-16",
+   "rows": 5056,
+   "source": "msci",
+   "ok": true,
+   "stale": false,
+   "age_days": 3,
+   "errors": [],
+   "checked_at": "2026-10-19T19:43:02.074Z"
+  },
+  "msci_acwi_islamic": {
+   "label": "MSCI Tüm Dünya İslami",
+   "freq": "daily",
+   "role": "halal",
+   "asset": "equity_foreign",
+   "first_date": "2007-06-01",
+   "last_date": "2026-10-16",
+   "rows": 5056,
+   "source": "msci",
+   "ok": true,
+   "stale": false,
+   "age_days": 3,
+   "errors": [],
+   "checked_at": "2026-10-19T19:43:04.024Z"
+  },
+  "msci_usa_islamic": {
+   "label": "MSCI ABD İslami",
+   "freq": "daily",
+   "role": "halal",
+   "asset": "equity_foreign",
+   "first_date": "2007-06-01",
+   "last_date": "2026-10-16",
+   "rows": 5056,
+   "source": "msci",
+   "ok": true,
+   "stale": false,
+   "age_days": 3,
+   "errors": [],
+   "checked_at": "2026-10-19T19:43:06.295Z"
+  },
+  "msci_usa": {
+   "label": "MSCI ABD",
+   "freq": "daily",
+   "role": "main",
+   "asset": "equity_foreign",
+   "first_date": "1997-01-01",
+   "last_date": "2026-10-16",
+   "rows": 7773,
+   "source": "msci",
+   "ok": true,
+   "stale": false,
+   "age_days": 3,
+   "errors": [],
+   "checked_at": "2026-10-19T19:43:07.081Z"
+  },
+  "cpi_expect_12m_tr": {
+   "label": "12 ay sonrası enflasyon beklentisi",
+   "freq": "monthly",
+   "role": "macro",
+   "asset": "macro",
+   "first_date": "2013-01-01",
+   "last_date": "2026-10-01",
+   "rows": 166,
+   "source": "evds",
+   "ok": true,
+   "stale": false,
+   "age_days": 18,
+   "errors": [],
+   "checked_at": "2026-10-19T19:43:08.415Z"
   }
  },
- "generated_at": "2026-10-19T15:37:54.979Z"
+ "generated_at": "2026-10-19T19:43:08.844Z"
 }
