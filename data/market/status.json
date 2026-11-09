@@ -6,14 +6,14 @@
    "role": "main",
    "asset": "fx",
    "first_date": "2000-01-03",
-   "last_date": "2026-11-06",
-   "rows": 6757,
+   "last_date": "2026-11-09",
+   "rows": 6758,
    "source": "evds",
    "ok": true,
    "stale": false,
    "age_days": 0,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:29.067Z"
+   "checked_at": "2026-11-09T17:44:45.345Z"
   },
   "eur_try": {
    "label": "Euro/TL",
@@ -21,14 +21,14 @@
    "role": "main",
    "asset": "fx",
    "first_date": "2000-01-03",
-   "last_date": "2026-11-06",
-   "rows": 6757,
+   "last_date": "2026-11-09",
+   "rows": 6758,
    "source": "evds",
    "ok": true,
    "stale": false,
    "age_days": 0,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:30.363Z"
+   "checked_at": "2026-11-09T17:44:46.478Z"
   },
   "gold_usd": {
    "label": "Ons altın",
@@ -36,14 +36,14 @@
    "role": "main",
    "asset": "gold",
    "first_date": "2011-06-01",
-   "last_date": "2026-11-05",
-   "rows": 5447,
+   "last_date": "2026-11-08",
+   "rows": 5450,
    "source": "alphavantage_metal",
    "ok": true,
    "stale": false,
    "age_days": 1,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:30.781Z"
+   "checked_at": "2026-11-09T17:44:46.858Z"
   },
   "silver_usd": {
    "label": "Ons gümüş",
@@ -51,14 +51,14 @@
    "role": "main",
    "asset": "silver",
    "first_date": "2011-06-01",
-   "last_date": "2026-11-05",
-   "rows": 5446,
+   "last_date": "2026-11-08",
+   "rows": 5449,
    "source": "alphavantage_metal",
    "ok": true,
    "stale": false,
    "age_days": 1,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:32.246Z"
+   "checked_at": "2026-11-09T17:44:48.332Z"
   },
   "gold_try_bist": {
    "label": "Borsa İstanbul altın",
@@ -66,14 +66,14 @@
    "role": "halal",
    "asset": "gold",
    "first_date": "2018-07-02",
-   "last_date": "2026-11-05",
-   "rows": 2072,
+   "last_date": "2026-11-09",
+   "rows": 2074,
    "source": "evds",
    "ok": true,
    "stale": false,
-   "age_days": 1,
+   "age_days": 0,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:32.624Z"
+   "checked_at": "2026-11-09T17:44:48.650Z"
   },
   "bist100": {
    "label": "BIST 100",
@@ -81,14 +81,14 @@
    "role": "main",
    "asset": "equity_tr",
    "first_date": "2000-01-04",
-   "last_date": "2026-11-05",
-   "rows": 6726,
+   "last_date": "2026-11-06",
+   "rows": 6727,
    "source": "evds",
    "ok": true,
    "stale": false,
-   "age_days": 1,
+   "age_days": 3,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:32.929Z"
+   "checked_at": "2026-11-09T17:44:48.971Z"
   },
   "bist_katilim_tum": {
    "label": "BIST Katılım Tüm",
@@ -96,14 +96,14 @@
    "role": "halal",
    "asset": "equity_tr",
    "first_date": "2021-10-01",
-   "last_date": "2026-11-05",
-   "rows": 1277,
+   "last_date": "2026-11-09",
+   "rows": 1279,
    "source": "bist_graphic",
    "ok": true,
    "stale": false,
-   "age_days": 1,
+   "age_days": 0,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:33.811Z"
+   "checked_at": "2026-11-09T17:44:49.907Z"
   },
   "bist_katilim_30": {
    "label": "BIST Katılım 30",
@@ -111,14 +111,14 @@
    "role": "halal",
    "asset": "equity_tr",
    "first_date": "2021-10-01",
-   "last_date": "2026-11-05",
-   "rows": 1277,
+   "last_date": "2026-11-09",
+   "rows": 1279,
    "source": "bist_graphic",
    "ok": true,
    "stale": false,
-   "age_days": 1,
+   "age_days": 0,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:34.135Z"
+   "checked_at": "2026-11-09T17:44:50.243Z"
   },
   "msci_world": {
    "label": "MSCI Dünya",
@@ -126,14 +126,14 @@
    "role": "main",
    "asset": "equity_foreign",
    "first_date": "1997-01-01",
-   "last_date": "2026-11-05",
-   "rows": 7787,
+   "last_date": "2026-11-06",
+   "rows": 7788,
    "source": "msci",
    "ok": true,
    "stale": false,
-   "age_days": 1,
+   "age_days": 3,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:34.760Z"
+   "checked_at": "2026-11-09T17:44:50.832Z"
   },
   "msci_acwi": {
    "label": "MSCI Tüm Dünya",
@@ -141,14 +141,14 @@
    "role": "main",
    "asset": "equity_foreign",
    "first_date": "1997-01-01",
-   "last_date": "2026-11-05",
-   "rows": 7787,
+   "last_date": "2026-11-06",
+   "rows": 7788,
    "source": "msci",
    "ok": true,
    "stale": false,
-   "age_days": 1,
+   "age_days": 3,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:35.038Z"
+   "checked_at": "2026-11-09T17:44:51.342Z"
   },
   "sp500": {
    "label": "S&P 500",
@@ -156,14 +156,14 @@
    "role": "main",
    "asset": "equity_foreign",
    "first_date": "2016-10-17",
-   "last_date": "2026-11-04",
-   "rows": 2527,
+   "last_date": "2026-11-05",
+   "rows": 2528,
    "source": "fred",
    "ok": true,
    "stale": false,
-   "age_days": 2,
+   "age_days": 4,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:36.320Z"
+   "checked_at": "2026-11-09T17:44:53.184Z"
   },
   "cpi_tr": {
    "label": "TÜFE (2025=100)",
@@ -176,9 +176,9 @@
    "source": "evds",
    "ok": true,
    "stale": false,
-   "age_days": 36,
+   "age_days": 39,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:36.632Z"
+   "checked_at": "2026-11-09T17:44:54.451Z"
   },
   "cpi_tr_2003": {
    "label": "TÜFE (2003=100)",
@@ -191,9 +191,9 @@
    "source": "evds",
    "ok": true,
    "stale": false,
-   "age_days": 36,
+   "age_days": 39,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:36.944Z"
+   "checked_at": "2026-11-09T17:44:55.578Z"
   },
   "policy_rate_tr": {
    "label": "TCMB politika faizi",
@@ -201,14 +201,14 @@
    "role": "macro",
    "asset": "tl_fixed",
    "first_date": "2018-09-14",
-   "last_date": "2026-11-06",
-   "rows": 2044,
+   "last_date": "2026-11-09",
+   "rows": 2045,
    "source": "evds",
    "ok": true,
    "stale": false,
    "age_days": 0,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:37.569Z"
+   "checked_at": "2026-11-09T17:44:56.234Z"
   },
   "funding_rate_tr": {
    "label": "TCMB ortalama fonlama",
@@ -216,14 +216,14 @@
    "role": "macro",
    "asset": "tl_fixed",
    "first_date": "2011-01-03",
-   "last_date": "2026-11-06",
-   "rows": 3983,
+   "last_date": "2026-11-09",
+   "rows": 3984,
    "source": "evds",
    "ok": true,
    "stale": false,
    "age_days": 0,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:37.889Z"
+   "checked_at": "2026-11-09T17:44:56.548Z"
   },
   "deposit_rate_tr": {
    "label": "TL mevduat faizi",
@@ -236,9 +236,9 @@
    "source": "evds",
    "ok": true,
    "stale": false,
-   "age_days": 7,
+   "age_days": 10,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:38.178Z"
+   "checked_at": "2026-11-09T17:44:56.869Z"
   },
   "us_10y": {
    "label": "ABD 10 yıllık faiz",
@@ -246,14 +246,14 @@
    "role": "macro",
    "asset": "macro",
    "first_date": "1990-01-02",
-   "last_date": "2026-11-04",
-   "rows": 9217,
+   "last_date": "2026-11-05",
+   "rows": 9218,
    "source": "fred",
    "ok": true,
    "stale": false,
-   "age_days": 2,
+   "age_days": 4,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:38.403Z"
+   "checked_at": "2026-11-09T17:44:57.676Z"
   },
   "us_real_10y": {
    "label": "ABD 10 yıllık reel faiz",
@@ -261,14 +261,14 @@
    "role": "macro",
    "asset": "macro",
    "first_date": "2003-01-02",
-   "last_date": "2026-11-04",
-   "rows": 5965,
+   "last_date": "2026-11-05",
+   "rows": 5966,
    "source": "fred",
    "ok": true,
    "stale": false,
-   "age_days": 2,
+   "age_days": 4,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:38.630Z"
+   "checked_at": "2026-11-09T17:44:57.865Z"
   },
   "usd_broad": {
    "label": "Geniş dolar endeksi",
@@ -281,9 +281,9 @@
    "source": "fred",
    "ok": true,
    "stale": false,
-   "age_days": 7,
+   "age_days": 10,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:38.971Z"
+   "checked_at": "2026-11-09T17:44:58.066Z"
   },
   "brent": {
    "label": "Brent petrol",
@@ -295,10 +295,10 @@
    "rows": 8461,
    "source": "fred",
    "ok": true,
-   "stale": false,
-   "age_days": 3,
+   "stale": true,
+   "age_days": 6,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:39.165Z"
+   "checked_at": "2026-11-09T17:44:58.213Z"
   },
   "vix": {
    "label": "VIX",
@@ -311,9 +311,9 @@
    "source": "fred",
    "ok": true,
    "stale": false,
-   "age_days": 1,
+   "age_days": 4,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:39.366Z"
+   "checked_at": "2026-11-09T17:44:58.589Z"
   },
   "msci_world_islamic": {
    "label": "MSCI Dünya İslami",
@@ -321,14 +321,14 @@
    "role": "halal",
    "asset": "equity_foreign",
    "first_date": "2007-06-01",
-   "last_date": "2026-11-05",
-   "rows": 5070,
+   "last_date": "2026-11-06",
+   "rows": 5071,
    "source": "msci",
    "ok": true,
    "stale": false,
-   "age_days": 1,
+   "age_days": 3,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:35.217Z"
+   "checked_at": "2026-11-09T17:44:51.859Z"
   },
   "msci_acwi_islamic": {
    "label": "MSCI Tüm Dünya İslami",
@@ -336,14 +336,14 @@
    "role": "halal",
    "asset": "equity_foreign",
    "first_date": "2007-06-01",
-   "last_date": "2026-11-05",
-   "rows": 5070,
+   "last_date": "2026-11-06",
+   "rows": 5071,
    "source": "msci",
    "ok": true,
    "stale": false,
-   "age_days": 1,
+   "age_days": 3,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:35.433Z"
+   "checked_at": "2026-11-09T17:44:52.128Z"
   },
   "msci_usa_islamic": {
    "label": "MSCI ABD İslami",
@@ -351,14 +351,14 @@
    "role": "halal",
    "asset": "equity_foreign",
    "first_date": "2007-06-01",
-   "last_date": "2026-11-05",
-   "rows": 5070,
+   "last_date": "2026-11-06",
+   "rows": 5071,
    "source": "msci",
    "ok": true,
    "stale": false,
-   "age_days": 1,
+   "age_days": 3,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:35.622Z"
+   "checked_at": "2026-11-09T17:44:52.551Z"
   },
   "msci_usa": {
    "label": "MSCI ABD",
@@ -366,14 +366,14 @@
    "role": "main",
    "asset": "equity_foreign",
    "first_date": "1997-01-01",
-   "last_date": "2026-11-05",
-   "rows": 7787,
+   "last_date": "2026-11-06",
+   "rows": 7788,
    "source": "msci",
    "ok": true,
    "stale": false,
-   "age_days": 1,
+   "age_days": 3,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:35.849Z"
+   "checked_at": "2026-11-09T17:44:52.835Z"
   },
   "cpi_expect_12m_tr": {
    "label": "12 ay sonrası enflasyon beklentisi",
@@ -386,10 +386,10 @@
    "source": "evds",
    "ok": true,
    "stale": false,
-   "age_days": 36,
+   "age_days": 39,
    "errors": [],
-   "checked_at": "2026-11-06T15:17:37.267Z"
+   "checked_at": "2026-11-09T17:44:55.892Z"
   }
  },
- "generated_at": "2026-11-06T15:17:39.366Z"
+ "generated_at": "2026-11-09T17:44:58.589Z"
 }
